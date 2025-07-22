@@ -5,7 +5,8 @@
 ```bash
 pip install omnilearned
 ```
-
+ or 
+ shifter --image=docker:vmikuni/pytorch:ngc-23.12-v0 /bin/bash
 ## Data
 
 A few standard datasets can be directly downloaded using the command:

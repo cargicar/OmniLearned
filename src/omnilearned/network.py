@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from omnilearned.layers import (
+from layers import (
     NoScaleDropout,
     InteractionBlock,
     LocalEmbeddingBlock,
@@ -11,7 +11,7 @@ from omnilearned.layers import (
     InputBlock,
     TokenAttBlock,
 )
-from omnilearned.diffusion import MPFourier, perturb, get_logsnr_alpha_sigma
+from diffusion import MPFourier, perturb, get_logsnr_alpha_sigma
 
 
 class PET2(nn.Module):
