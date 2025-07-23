@@ -196,6 +196,7 @@ def load_data(
         "cms_qcd",
         "cms_bsm",
         "cms_top",
+        "G4",
     ]
     if dataset_name not in supported_datasets:
         raise ValueError(
@@ -218,7 +219,7 @@ def load_data(
         dataset_path = Path(dataset_path)
         dataset_path.mkdir(parents=True, exist_ok=True)
 
-        if not any(dataset_path.iterdir()):
+        if not any(dataset_path.iterdir()) or names[0]!='G4':
             print(f"Fetching download url for dataset {names[iname]}")
             url = get_url(names[iname], dataset_type)
             if url is None:

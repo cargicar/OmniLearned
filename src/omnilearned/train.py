@@ -209,7 +209,9 @@ def train_step(
                         logs["loss_class"] += loss_class.detach()
                         loss = loss + loss_class
                 else:
-                    loss_class = class_cost(outputs["y_pred"], y).mean()
+                    #FIXME
+                    y_int_labels = torch.argmax(y, dim=1)
+                    loss_class = class_cost(outputs["y_pred"], y_int_labels).mean()
                     loss = loss + loss_class
                     logs["loss_class"] += loss_class.detach()
             if outputs["z_pred"] is not None:
