@@ -197,6 +197,7 @@ def load_data(
         "cms_bsm",
         "cms_top",
         "G4",
+        "G4_test",
     ]
     if dataset_name not in supported_datasets:
         raise ValueError(
@@ -219,7 +220,7 @@ def load_data(
         dataset_path = Path(dataset_path)
         dataset_path.mkdir(parents=True, exist_ok=True)
 
-        if not any(dataset_path.iterdir()) or names[0]!='G4':
+        if not any(dataset_path.iterdir()) or names[0]!='G4_test':
             print(f"Fetching download url for dataset {names[iname]}")
             url = get_url(names[iname], dataset_type)
             if url is None:
@@ -227,6 +228,9 @@ def load_data(
             download_h5_files(url, dataset_path)
 
         h5_files = list(dataset_path.glob("*.h5"))
+        #TODO temporary guard to load h5 files from G4_test
+        assert len(h5_files)!=0, "Not .h5 files founds in path"
+            
         file_list.extend(map(str, h5_files))  # Convert to string paths
 
         index_file = dataset_path / "file_index.npy"
@@ -274,6 +278,7 @@ def load_data(
         data,
         batch_size=batch,
         pin_memory=torch.cuda.is_available(),
+        #pin_memory=False,
         shuffle=True,
         sampler=None,
         num_workers=num_workers,
