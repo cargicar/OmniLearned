@@ -1,0 +1,68 @@
+**** Setup ****
+Total params: 0.62M
+Training on device: cuda:0, with 1 GPUs
+************
+**** Setup ****
+Train dataset len: 78125
+************
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 844, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 820, in main
+[rank0]:     train_model(
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 456, in train_model
+[rank0]:     train_logs = train_step(
+[rank0]:                  ^^^^^^^^^^^
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 193, in train_step
+[rank0]:     outputs = model(X, y, **model_kwargs)
+[rank0]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/parallel/distributed.py", line 1637, in forward
+[rank0]:     else self._run_ddp_forward(*inputs, **kwargs)
+[rank0]:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/parallel/distributed.py", line 1464, in _run_ddp_forward
+[rank0]:     return self.module(*inputs, **kwargs)  # type: ignore[index]
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/network.py", line 137, in forward
+[rank0]:     x_body = self.body(x, cond, pid, add_info, torch.zeros_like(time))
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/network.py", line 456, in forward
+[rank0]:     x_embed, x = self.embed(x, cond, mask)
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/layers.py", line 137, in forward
+[rank0]:     x_mlp = self.mlp(self.norm(x), mask)
+[rank0]:                      ^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/layers.py", line 38, in forward
+[rank0]:     x = x * self.weight
+[rank0]:         ~~^~~~~~~~~~~~~
+[rank0]: RuntimeError: The size of tensor a (9) must match the size of tensor b (4) at non-singleton dimension 2
+[rank0]:[W731 15:34:59.193977224 ProcessGroupNCCL.cpp:1479] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())

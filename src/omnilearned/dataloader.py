@@ -220,12 +220,12 @@ def load_data(
         dataset_path = Path(dataset_path)
         dataset_path.mkdir(parents=True, exist_ok=True)
 
-        if not any(dataset_path.iterdir()) or names[0]!='G4_test':
-            print(f"Fetching download url for dataset {names[iname]}")
-            url = get_url(names[iname], dataset_type)
-            if url is None:
-                raise ValueError(f"No download URL found for dataset '{dataset_name}'.")
-            download_h5_files(url, dataset_path)
+        # if not any(dataset_path.iterdir()) or names[0]!='G4_test':
+        #     print(f"Fetching download url for dataset {names[iname]}")
+        #     url = get_url(names[iname], dataset_type)
+        #     if url is None:
+        #         raise ValueError(f"No download URL found for dataset '{dataset_name}'.")
+        #     download_h5_files(url, dataset_path)
 
         h5_files = list(dataset_path.glob("*.h5"))
         #TODO temporary guard to load h5 files from G4_test

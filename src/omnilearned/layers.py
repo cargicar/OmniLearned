@@ -161,11 +161,13 @@ class InteractionBlock(nn.Module):
         xi = x.unsqueeze(2).expand(-1, -1, x.shape[1], -1)
         xj = x.unsqueeze(1).expand(-1, x.shape[1], -1, -1)
         mask_event = (mask.float() @ mask.float().transpose(-1, -2)).unsqueeze(-1)
+        #NOTE g4 dataset x features are the spatial position, so get_mass does not make sense here (get_mass = invariant m^2)
+        #NOTE g4 dataset does not containg tranverse momentum PT, so maybe get_kt also does not make sense?
         x_int = torch.cat(
             [
-                get_mass(xi, xj, mask_event, is_log=True),
+                #get_mass(xi, xj, mask_event, is_log=True),
                 get_dr(xi, xj, mask_event, is_log=True),
-                get_kt(xi, xj, mask_event, is_log=True),
+                #get_kt(xi, xj, mask_event, is_log=True),
             ],
             -1,
         )
@@ -267,15 +269,15 @@ class LocalEmbeddingBlock(nn.Module):
 
         if self.physics:
             # Add the information of the interaction matrix
+            #NOTE g4 dataset x features are the spatial position, so get_mass does not make sense here (get_mass = invariant m^2)
+            #NOTE g4 dataset does not containg tranverse momentum PT, so maybe get_kt also does not make sense?
             local_features = (
                 torch.cat(
                     [
                         local_features,
-                        get_mass(
-                            knn_fts_center, neighbors, mask_neighbors, is_log=True
-                        ),
+                        #get_mass(knn_fts_center, neighbors, mask_neighbors, is_log=True),
                         get_dr(knn_fts_center, neighbors, mask_neighbors, is_log=True),
-                        get_kt(knn_fts_center, neighbors, mask_neighbors, is_log=True),
+                        #get_kt(knn_fts_center, neighbors, mask_neighbors, is_log=True),
                     ],
                     -1,
                 )

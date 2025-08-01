@@ -149,7 +149,6 @@ class PET2(nn.Module):
             "alpha": alpha**2,
         }
 
-
 class PET_classifier(nn.Module):
     def __init__(
         self,
@@ -288,8 +287,9 @@ class PET_generator(nn.Module):
         # Add tokens and label embedding
         mask = x[:, :, 3:4] != 0
         mask = torch.cat([torch.ones_like(mask[:, :1]), mask], 1)
-        x = torch.cat([self.pid_embed(y).unsqueeze(1), x], 1) * mask
-
+        #TODO why unsqueeze?
+        #x = torch.cat([self.pid_embed(y).unsqueeze(1), x], 1) * mask
+        x = torch.cat([self.pid_embed(y), x], 1) * mask
         for ib, blk in enumerate(self.in_blocks):
             x = blk(x, mask=mask)
 
@@ -317,7 +317,7 @@ class PET_body(nn.Module):
         num_tokens=4,
         K=15,
         use_int=True,
-        conditional=False,
+        conditional=True,
         cond_dim=3,
         pid=False,
         pid_dim=9,
@@ -362,6 +362,8 @@ class PET_body(nn.Module):
             K=K,
             num_heads=num_heads,
             physics=True,
+            #TODO physics True increases the number of features?
+            #physics=False,
             num_transformers=num_transf_local,
         )
 

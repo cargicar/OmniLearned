@@ -402,6 +402,7 @@ def test_step(
             loss = loss + loss_clip
             logs["loss_clip"] += loss_clip.detach()
 
+        print(f"################3 loss {loss}")
         logs["loss"] += loss.detach()
 
     if dist.is_initialized():
@@ -484,6 +485,7 @@ def train_model(
 
         if is_master_node():
             print(
+                f"Epoch [{epoch + 1}/{num_epochs}] Loss: {losses['train_loss'][-1]:.4f}, Val Loss: {losses['val_loss'][-1]:.4f} , lr: {lr_scheduler.get_last_lr()[0]}"
                 f"Epoch [{epoch + 1}/{num_epochs}] Loss: {losses['train_loss'][-1]:.4f}, Val Loss: {losses['val_loss'][-1]:.4f} , lr: {lr_scheduler.get_last_lr()[0]}"
             )
             print(
