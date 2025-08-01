@@ -165,9 +165,9 @@ class InteractionBlock(nn.Module):
         #NOTE g4 dataset does not containg tranverse momentum PT, so maybe get_kt also does not make sense?
         x_int = torch.cat(
             [
-                #get_mass(xi, xj, mask_event, is_log=True),
+                get_mass(xi, xj, mask_event, is_log=True),
                 get_dr(xi, xj, mask_event, is_log=True),
-                #get_kt(xi, xj, mask_event, is_log=True),
+                get_kt(xi, xj, mask_event, is_log=True),
             ],
             -1,
         )
@@ -256,9 +256,9 @@ class LocalEmbeddingBlock(nn.Module):
             indices = indices + idx_base
             indices = indices.view(-1)
         # FIXME
-        #neighbors = features.view(batch_size * num_points, -1)[indices, :]
+        neighbors = features.view(batch_size * num_points, -1)[indices, :]
         #neighbors = neighbors.view(batch_size, num_points, self.K, num_dims)
-        neighbors = features.reshape(batch_size * num_points, -1)[indices, :]
+        #neighbors = features.reshape(batch_size * num_points, -1)[indices, :]
         neighbors = neighbors.view(batch_size, num_points, self.K, num_dims)
 
         mask_neighbors = mask.view(batch_size * num_points, -1)[indices, :]
@@ -275,9 +275,9 @@ class LocalEmbeddingBlock(nn.Module):
                 torch.cat(
                     [
                         local_features,
-                        #get_mass(knn_fts_center, neighbors, mask_neighbors, is_log=True),
+                        get_mass(knn_fts_center, neighbors, mask_neighbors, is_log=True),
                         get_dr(knn_fts_center, neighbors, mask_neighbors, is_log=True),
-                        #get_kt(knn_fts_center, neighbors, mask_neighbors, is_log=True),
+                        get_kt(knn_fts_center, neighbors, mask_neighbors, is_log=True),
                     ],
                     -1,
                 )

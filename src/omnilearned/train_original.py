@@ -2,16 +2,14 @@ import json
 import numpy as np
 import torch
 import torch.nn as nn
-from network import PET2
-from dataloader import load_data
-import argparse
+from omnilearned.network import PET2
+from omnilearned.dataloader import load_data
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-#from pytorch_optimizer import Lion
-from lion_pytorch import Lion
+from pytorch_optimizer import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
 
-from utils import (
+from omnilearned.utils import (
     is_master_node,
     ddp_setup,
     get_param_groups,
@@ -24,117 +22,6 @@ import torch.amp as amp
 
 torch.set_float32_matmul_precision("high")
 torch._dynamo.config.verbose = False
-
-import argparse
-import os # Import os for default path if needed
-
-def parse_arguments():
-    """
-    Parses command-line arguments for the model training script.
-
-    Returns:
-        argparse.Namespace: An object containing all the parsed arguments.
-    """
-    parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
-
-    # --- General/Output Arguments ---
-    parser.add_argument("--outdir", type=str, default="",
-                        help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="",
-                        help="Tag to append to saved files (e.g., model checkpoints, logs).")
-    parser.add_argument("--pretrain_tag", type=str, default="pretrain",
-                        help="Tag to use when loading pre-trained models.")
-    parser.add_argument("--dataset", type=str, default="top",
-                        help="Name of the dataset to use (e.g., 'top').")
-    parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets",
-                        help="Base path to the dataset directory.")
-    parser.add_argument("--wandb", action="store_true", # Use store_true for boolean flags
-                        help="Enable Weights & Biases logging.")
-
-    # --- Training State Arguments ---
-    parser.add_argument("--fine_tune", action="store_true",
-                        help="Enable fine-tuning mode (loads pre-trained weights and adjusts learning rate).")
-    parser.add_argument("--resuming", action="store_true",
-                        help="Resume training from the latest checkpoint in outdir/save_tag.")
-
-    # --- Data/Feature Arguments ---
-    parser.add_argument("--num_feat", type=int, default=4,
-                        help="Number of features per particle/vector (e.g., 4 for 4-vectors).")
-    parser.add_argument("--conditional", action="store_true",
-                        help="Enable conditional generation/training.")
-    parser.add_argument("--num_cond", type=int, default=3,
-                        help="Number of conditioning features/dimensions.")
-    parser.add_argument("--use_pid", action="store_true",
-                        help="Use Particle ID (PID) as an input feature.")
-    parser.add_argument("--pid_idx", type=int, default=-1,
-                        help="Index of the PID feature in the input data (if use_pid is True).")
-    parser.add_argument("--use_add", action="store_true",
-                        help="Use additional features.")
-    parser.add_argument("--num_add", type=int, default=4,
-                        help="Number of additional features.")
-    parser.add_argument("--use_clip", action="store_true",
-                        help="Enable gradient clipping.")
-    parser.add_argument("--use_event_loss", action="store_true",
-                        help="Enable event-level loss calculation.")
-    parser.add_argument("--num_classes", type=int, default=2,
-                        help="Number of output classes for classification tasks.")
-    parser.add_argument("--mode", type=str, default="classifier",
-                        choices=["classifier", "generator", "other_mode_if_any"], # Add valid choices
-                        help="Operating mode of the model (e.g., 'classifier', 'generator').")
-    parser.add_argument("--num_workers", type=int, default=16,
-                        help="Number of worker processes for data loading.")
-
-
-    # --- Training Hyperparameters ---
-    parser.add_argument("--batch", type=int, default=64,
-                        help="Batch size for training.")
-    parser.add_argument("--iterations", type=int, default=-1,
-                        help="Number of training iterations. If -1, run for specified epochs.")
-    parser.add_argument("--epoch", type=int, default=15,
-                        help="Number of training epochs.")
-    parser.add_argument("--warmup_epoch", type=int, default=1,
-                        help="Number of warmup epochs for learning rate scheduling.")
-    parser.add_argument("--use_amp", action="store_true",
-                        help="Enable Automatic Mixed Precision (AMP) training.")
-    parser.add_argument("--optim", type=str, default="lion",
-                        choices=["adamw", "lion", "sgd"], # Example: add common optimizers
-                        help="Optimizer to use (e.g., 'lion', 'adamw').")
-    parser.add_argument("--b1", type=float, default=0.95,
-                        help="Beta1 parameter for Adam-like optimizers.")
-    parser.add_argument("--b2", type=float, default=0.98,
-                        help="Beta2 parameter for Adam-like optimizers.")
-    parser.add_argument("--lr", type=float, default=5e-4,
-                        help="Initial learning rate.")
-    parser.add_argument("--lr_factor", type=float, default=10.0,
-                        help="Learning rate factor for fine-tuning or scheduling.")
-    parser.add_argument("--wd", type=float, default=0.3,
-                        help="Weight decay (L2 regularization).")
-
-    # --- Model Architecture Hyperparameters (if applicable, e.g., for a Transformer) ---
-    parser.add_argument("--num_transf", type=int, default=6,
-                        help="Number of transformer blocks/layers.")
-    parser.add_argument("--num_transf_heads", type=int, default=2,
-                        help="Number of attention heads in each transformer block.")
-    parser.add_argument("--num_tokens", type=int, default=4,
-                        help="Number of tokens in the model (e.g., for certain attention mechanisms).")
-    parser.add_argument("--num_head", type=int, default=8,
-                        help="General number of attention heads (if different from num_transf_heads).")
-    parser.add_argument("--K", type=int, default=15,
-                        help="K parameter for K-Nearest Neighbors or similar (e.g., for graph construction).")
-    parser.add_argument("--base_dim", type=int, default=64,
-                        help="Base dimension for model embeddings/features.")
-    parser.add_argument("--mlp_ratio", type=int, default=2,
-                        help="MLP hidden dimension ratio relative to base_dim.")
-    parser.add_argument("--attn_drop", type=float, default=0.1,
-                        help="Dropout rate for attention layers.")
-    parser.add_argument("--mlp_drop", type=float, default=0.1,
-                        help="Dropout rate for MLP layers.")
-    parser.add_argument("--feature_drop", type=float, default=0.0,
-                        help="Dropout rate for input features.")
-
-
-    args = parser.parse_args()
-    return args
 
 
 def train_step(
@@ -209,8 +96,6 @@ def train_step(
                         logs["loss_class"] += loss_class.detach()
                         loss = loss + loss_class
                 else:
-                    #FIXME
-                    #y_int_labels = torch.argmax(y, dim=1)
                     loss_class = class_cost(outputs["y_pred"], y).mean()
                     loss = loss + loss_class
                     logs["loss_class"] += loss_class.detach()
@@ -353,8 +238,7 @@ def test_step(
                     logs["loss_class"] += loss_class.detach()
                     loss = loss + loss_class
             else:
-                y_int_labels = torch.argmax(y, dim=1)
-                loss_class = class_cost(outputs["y_pred"], y_int_labels).mean()
+                loss_class = class_cost(outputs["y_pred"], y).mean()
                 loss = loss + loss_class
                 logs["loss_class"] += loss_class.detach()
         if outputs["z_pred"] is not None:
@@ -402,7 +286,6 @@ def test_step(
             loss = loss + loss_clip
             logs["loss_clip"] += loss_clip.detach()
 
-        print(f"################3 loss {loss}")
         logs["loss"] += loss.detach()
 
     if dist.is_initialized():
@@ -485,7 +368,6 @@ def train_model(
 
         if is_master_node():
             print(
-                f"Epoch [{epoch + 1}/{num_epochs}] Loss: {losses['train_loss'][-1]:.4f}, Val Loss: {losses['val_loss'][-1]:.4f} , lr: {lr_scheduler.get_last_lr()[0]}"
                 f"Epoch [{epoch + 1}/{num_epochs}] Loss: {losses['train_loss'][-1]:.4f}, Val Loss: {losses['val_loss'][-1]:.4f} , lr: {lr_scheduler.get_last_lr()[0]}"
             )
             print(
@@ -644,30 +526,71 @@ def restore_checkpoint(
     return startEpoch, best_loss
 
 
-def main():
-    args = parse_arguments()
+def run(
+    outdir: str = "",
+    save_tag: str = "",
+    pretrain_tag: str = "pretrain",
+    dataset: str = "top",
+    path: str = "/pscratch/sd/v/vmikuni/datasets",
+    wandb=False,
+    fine_tune: bool = False,
+    resuming: bool = False,
+    num_feat: int = 4,
+    conditional: bool = False,
+    num_cond: bool = 3,
+    use_pid: bool = False,
+    pid_idx: int = -1,
+    use_add: bool = False,
+    num_add: int = 4,
+    use_clip: bool = False,
+    use_event_loss: bool = False,
+    num_classes: int = 2,
+    mode: str = "classifier",
+    batch: int = 64,
+    iterations: int = -1,
+    epoch: int = 15,
+    warmup_epoch: int = 1,
+    use_amp: bool = False,
+    optim: str = "lion",
+    b1: float = 0.95,
+    b2: float = 0.98,
+    lr: float = 5e-4,
+    lr_factor: float = 10.0,
+    wd: float = 0.3,
+    num_transf: int = 6,
+    num_transf_heads: int = 2,
+    num_tokens: int = 4,
+    num_head: int = 8,
+    K: int = 15,
+    base_dim: int = 64,
+    mlp_ratio: int = 2,
+    attn_drop: float = 0.1,
+    mlp_drop: float = 0.1,
+    feature_drop: float = 0.0,
+    num_workers: int = 16,
+):
     local_rank, rank, size = ddp_setup()
     # set up model
     model = PET2(
-        input_dim=args.num_feat,
-        hidden_size=args.base_dim,
-        num_transformers=args.num_transf,
-        num_transformers_head=args.num_transf_heads,
-        num_heads=args.num_head,
-        mlp_ratio=args.mlp_ratio,
-        mlp_drop=args.mlp_drop,
-        attn_drop=args.attn_drop,
-        feature_drop=args.feature_drop,
-        num_tokens=args.num_tokens,
-        K=args.K,
-        conditional=args.conditional,
-        cond_dim=args.num_cond,
-        pid=args.use_pid,
-        add_info=args.use_add,
-        add_dim=args.num_add,
-        use_time=False if args.mode == "classifier" else True,
-        mode=args.mode,
-        num_classes=args.num_classes,
+        input_dim=num_feat,
+        hidden_size=base_dim,
+        num_transformers=num_transf,
+        num_transformers_head=num_transf_heads,
+        num_heads=num_head,
+        mlp_ratio=mlp_ratio,
+        mlp_drop=mlp_drop,
+        attn_drop=attn_drop,
+        feature_drop=feature_drop,
+        num_tokens=num_tokens,
+        K=K,
+        conditional=conditional,
+        cond_dim=num_cond,
+        pid=use_pid,
+        add_info=use_add,
+        add_dim=num_add,
+        use_time=False if mode == "classifier" else True,
+        mode=mode,
+        num_classes=num_classes,
     )
 
     if rank == 0:
@@ -682,15 +605,15 @@ def main():
 
     # load in train data
     train_loader = load_data(
-        args.dataset,
+        dataset,
         dataset_type="train",
-        use_pid=args.use_pid,
-        pid_idx=args.pid_idx,
-        use_add=args.use_add,
-        num_add=args.num_add,
-        path=args.path,
-        batch=args.batch,
-        num_workers=args.num_workers,
+        use_pid=use_pid,
+        pid_idx=pid_idx,
+        use_add=use_add,
+        num_add=num_add,
+        path=path,
+        batch=batch,
+        num_workers=num_workers,
         rank=rank,
         size=size,
     )
@@ -700,34 +623,34 @@ def main():
         print("************")
 
     test_loader = load_data(
-        args.dataset,
+        dataset,
         dataset_type="test",
-        use_pid=args.use_pid,
-        pid_idx=args.pid_idx,
-        use_add=args.use_add,
-        num_add=args.num_add,
-        path=args.path,
-        batch=args.batch,
-        num_workers=args.num_workers,
+        use_pid=use_pid,
+        pid_idx=pid_idx,
+        use_add=use_add,
+        num_add=num_add,
+        path=path,
+        batch=batch,
+        num_workers=num_workers,
         rank=rank,
         size=size,
     )
 
     param_groups = get_param_groups(
-        model, args.wd, args.lr, lr_factor=args.lr_factor, fine_tune=args.fine_tune
+        model, wd, lr, lr_factor=lr_factor, fine_tune=fine_tune
     )
 
-    if args.optim not in ["adam", "lion"]:
+    if optim not in ["adam", "lion"]:
         raise ValueError(
-            f"Optimizer '{args.optim}' not supported. Choose from adam or lion."
+            f"Optimizer '{optim}' not supported. Choose from adam or lion."
         )
 
-    if args.optim == "lion":
-        optimizer = Lion(param_groups, betas=(args.b1, args.b2))
-    if args.optim == "adam":
+    if optim == "lion":
+        optimizer = Lion(param_groups, betas=(b1, b2))
+    if optim == "adam":
         optimizer = torch.optim.AdamW(param_groups)
 
-    train_steps = len(train_loader) if args.iterations < 0 else args.iterations
+    train_steps = len(train_loader) if iterations < 0 else iterations
 
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
     #     optimizer, (train_steps * epoch)
@@ -735,46 +658,46 @@ def main():
 
     lr_scheduler = get_cosine_schedule_with_warmup(
         optimizer=optimizer,
-        num_warmup_steps=train_steps * args.warmup_epoch,
-        num_training_steps=(train_steps * args.epoch),
+        num_warmup_steps=train_steps * warmup_epoch,
+        num_training_steps=(train_steps * epoch),
     )
 
     epoch_init = 0
     loss_init = np.inf
 
-    if os.path.isfile(os.path.join(args.outdir, get_checkpoint_name(args.save_tag))) and args.resuming:
+    if os.path.isfile(os.path.join(outdir, get_checkpoint_name(save_tag))) and resuming:
         if is_master_node():
             print(
-                f"Continue training with checkpoint from {os.path.join(args.outdir, get_checkpoint_name(args.save_tag))}"
+                f"Continue training with checkpoint from {os.path.join(outdir, get_checkpoint_name(save_tag))}"
             )
 
         epoch_init, loss_init = restore_checkpoint(
             model,
             optimizer,
             lr_scheduler,
-            args.outdir,
-            get_checkpoint_name(args.save_tag),
+            outdir,
+            get_checkpoint_name(save_tag),
             local_rank,
         )
 
     if (
-        os.path.isfile(os.path.join(args.outdir, get_checkpoint_name(args.pretrain_tag)))
-        and args.fine_tune
+        os.path.isfile(os.path.join(outdir, get_checkpoint_name(pretrain_tag)))
+        and fine_tune
     ):
         if is_master_node():
             print(
-                f"Will fine-tune using checkpoint {os.path.join(args.outdir, get_checkpoint_name(args.pretrain_tag))}"
+                f"Will fine-tune using checkpoint {os.path.join(outdir, get_checkpoint_name(pretrain_tag))}"
             )
 
         epoch_init, loss_init = restore_checkpoint(
             model,
             optimizer,
             lr_scheduler,
-            args.outdir,
-            get_checkpoint_name(args.pretrain_tag),
+            outdir,
+            get_checkpoint_name(pretrain_tag),
             local_rank,
             is_main_node=is_master_node(),
-            fine_tune=args.fine_tune,
+            fine_tune=fine_tune,
         )
 
     # Transfer model to GPU if available
@@ -792,7 +715,7 @@ def main():
         **kwarg,
     )
 
-    if args.wandb:
+    if wandb:
         import wandb
 
         if is_master_node():
@@ -804,14 +727,14 @@ def main():
         run = wandb.init(
             # Set the project where this run will be logged
             project="OmniLearn",
-            name=args.save_tag,
+            name=save_tag,
             mode=mode_wandb,
             # Track hyperparameters and run metadata
             config={
-                "learning_rate": args.lr,
-                "epochs": args.epoch,
-                "batch size": args.batch,
-                "mode": args.mode,
+                "learning_rate": lr,
+                "epochs": epoch,
+                "batch size": batch,
+                "mode": mode,
             },
         )
     else:
@@ -823,22 +746,19 @@ def main():
         test_loader,
         optimizer,
         lr_scheduler,
-        num_epochs=args.epoch,
+        num_epochs=epoch,
         device=device,
         loss_class=nn.CrossEntropyLoss(reduction="none"),
         loss_gen=nn.MSELoss(reduction="none"),
-        output_dir=args.outdir,
-        save_tag=args.save_tag,
-        use_clip=args.use_clip,
-        use_event_loss=args.use_event_loss,
-        iterations_per_epoch=args.iterations,
+        output_dir=outdir,
+        save_tag=save_tag,
+        use_clip=use_clip,
+        use_event_loss=use_event_loss,
+        iterations_per_epoch=iterations,
         epoch_init=epoch_init,
         loss_init=loss_init,
-        use_amp=args.use_amp,
+        use_amp=use_amp,
         run=run,
     )
 
     dist.destroy_process_group()
-
-if __name__ == "__main__":
-    main()
