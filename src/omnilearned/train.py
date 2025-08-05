@@ -210,8 +210,10 @@ def train_step(
                         loss = loss + loss_class
                 else:
                     #FIXME
-                    #y_int_labels = torch.argmax(y, dim=1)
-                    loss_class = class_cost(outputs["y_pred"], y).mean()
+                    #loss_class = class_cost(outputs["y_pred"], y).mean()
+                    # for G4 use
+                    y_int = torch.argmax(y, dim=1)
+                    loss_class = class_cost(outputs["y_pred"], y_int).mean()
                     loss = loss + loss_class
                     logs["loss_class"] += loss_class.detach()
             if outputs["z_pred"] is not None:
@@ -317,16 +319,17 @@ def test_step(
         iterations_per_epoch = len(dataloader)
 
     data_iter = iter(dataloader)
-
+    
     for batch_idx in range(iterations_per_epoch):
         try:
             batch = next(data_iter)
         except StopIteration:
             data_iter = iter(dataloader)
             batch = next(data_iter)
-
+        
         # for batch_idx, batch in enumerate(dataloader):
         X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -402,7 +405,7 @@ def test_step(
             loss = loss + loss_clip
             logs["loss_clip"] += loss_clip.detach()
 
-        print(f"################3 loss {loss}")
+        print(f"################3 loss {loss.detach()}")
         logs["loss"] += loss.detach()
 
     if dist.is_initialized():

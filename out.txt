@@ -1,27 +1,63 @@
+/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/cuda/__init__.py:174: UserWarning: CUDA initialization: CUDA unknown error - this may be due to an incorrectly set up environment, e.g. changing env variable CUDA_VISIBLE_DEVICES after program start. Setting the available devices to be zero. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:109.)
+  return torch._C._cuda_getDeviceCount() > 0
 **** Setup ****
-Total params: 0.63M
-Training on device: cuda:0, with 1 GPUs
+Total params: 0.62M
+Training on device: cpu, with 1 GPUs
 ************
 **** Setup ****
-Train dataset len: 78125
+Train dataset len: 5994
 ************
+/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/cuda/__init__.py:174: UserWarning: CUDA initialization: CUDA unknown error - this may be due to an incorrectly set up environment, e.g. changing env variable CUDA_VISIBLE_DEVICES after program start. Setting the available devices to be zero. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:109.)
+  return torch._C._cuda_getDeviceCount() > 0
+No CUDA runtime is found, using CUDA_HOME='/usr'
 [rank0]: Traceback (most recent call last):
-[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 844, in <module>
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 847, in <module>
 [rank0]:     main()
-[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 820, in main
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 823, in main
 [rank0]:     train_model(
-[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 456, in train_model
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 459, in train_model
 [rank0]:     train_logs = train_step(
 [rank0]:                  ^^^^^^^^^^^
-[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 279, in train_step
-[rank0]:     loss.backward()  # Backward pass
-[rank0]:     ^^^^^^^^^^^^^^^
-[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/_tensor.py", line 648, in backward
-[rank0]:     torch.autograd.backward(
-[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/autograd/__init__.py", line 353, in backward
-[rank0]:     _engine_run_backward(
-[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/autograd/graph.py", line 824, in _engine_run_backward
-[rank0]:     return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
-[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[rank0]: KeyboardInterrupt
-[rank0]:[W801 12:16:04.303731809 ProcessGroupNCCL.cpp:1479] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 193, in train_step
+[rank0]:     outputs = model(X, y, **model_kwargs)
+[rank0]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/parallel/distributed.py", line 1637, in forward
+[rank0]:     else self._run_ddp_forward(*inputs, **kwargs)
+[rank0]:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/parallel/distributed.py", line 1464, in _run_ddp_forward
+[rank0]:     return self.module(*inputs, **kwargs)  # type: ignore[index]
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/network.py", line 137, in forward
+[rank0]:     x_body = self.body(x, cond, pid, add_info, torch.zeros_like(time))
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/network.py", line 460, in forward
+[rank0]:     local_features, indices = self.local_physics(coord_shift + x[:, :, :2], x, mask)
+[rank0]:                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/layers.py", line 260, in forward
+[rank0]:     indices = indices + idx_base
+[rank0]:               ~~~~~~~~^~~~~~~~~~
+[rank0]: TypeError: unsupported operand type(s) for +: 'NoneType' and 'Tensor'

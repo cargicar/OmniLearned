@@ -256,9 +256,9 @@ class LocalEmbeddingBlock(nn.Module):
             indices = indices + idx_base
             indices = indices.view(-1)
         # FIXME
-        neighbors = features.view(batch_size * num_points, -1)[indices, :]
+        #neighbors = features.view(batch_size * num_points, -1)[indices, :]
         #neighbors = neighbors.view(batch_size, num_points, self.K, num_dims)
-        #neighbors = features.reshape(batch_size * num_points, -1)[indices, :]
+        neighbors = features.reshape(batch_size * num_points, -1)[indices, :]
         neighbors = neighbors.view(batch_size, num_points, self.K, num_dims)
 
         mask_neighbors = mask.view(batch_size * num_points, -1)[indices, :]

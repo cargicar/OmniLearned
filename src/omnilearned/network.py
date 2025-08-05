@@ -288,7 +288,7 @@ class PET_generator(nn.Module):
         mask = x[:, :, 3:4] != 0
         mask = torch.cat([torch.ones_like(mask[:, :1]), mask], 1)
         #TODO why unsqueeze?
-        #x = torch.cat([self.pid_embed(y).unsqueeze(1), x], 1) * mask
+        x = torch.cat([self.pid_embed(y).unsqueeze(1), x], 1) * mask
         x = torch.cat([self.pid_embed(y), x], 1) * mask
         for ib, blk in enumerate(self.in_blocks):
             x = blk(x, mask=mask)
