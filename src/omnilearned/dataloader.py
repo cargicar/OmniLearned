@@ -123,19 +123,20 @@ class HEPDataset(Dataset):
         self._file_cache = {}  # lazy cache for open h5py.File handles
         self.file_indices = file_indices
         #TODO self.valid_indices added to filter out samples with all points equal zero. Have not been teste for generality with other datasets ther than G4
+        #NOTE this loop is taking ages!
         # Pre-process to create a list of valid indices
-        self.valid_indices = []
-        for file_idx in range(len(file_paths)):
-            f = self._get_file(file_idx)
-            for (batch_idx, sample_idx) in self.file_indices:
-                # Check if the sample is all zeros.
-                # Assuming f["data"] is a numpy array or similar.
-                sample_data = f["data"][sample_idx]
-                if not (sample_data == 0).all():
-                    self.valid_indices.append((file_idx, sample_idx))
+        # self.valid_indices = []
+        # for file_idx in range(len(file_paths)):
+        #     f = self._get_file(file_idx)
+        #     for (batch_idx, sample_idx) in self.file_indices:
+        #         # Check if the sample is all zeros.
+        #         # Assuming f["data"] is a numpy array or similar.
+        #         sample_data = f["data"][sample_idx]
+        #         if not (sample_data == 0).all():
+        #             self.valid_indices.append((file_idx, sample_idx))
 
-        # Update the length of the dataset to be the number of valid samples
-        self.file_indices = self.valid_indices
+        # # Update the length of the dataset to be the number of valid samples
+        # self.file_indices = self.valid_indices
 
         # random.shuffle(self.file_indices)  # Shuffle data entries globally
 
