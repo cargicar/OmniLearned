@@ -62,6 +62,22 @@ class NoScaleDropout(nn.Module):
             return x * mask
 
 
+
+def get_mass2(xi, xj, mask, is_log=False):
+    m2 = (
+        2
+        * torch.exp(xi[:, :, :, 2])
+        * torch.exp(xj[:, :, :, 2])
+        # * (
+        #     torch.cosh(xi[:, :, :, 0] - xj[:, :, :, 0])
+        #     - torch.cos(xi[:, :, :, 1] - xj[:, :, :, 1])
+        # )
+    )
+    if is_log:
+        return torch.log(torch.where(m2 > 0, m2, 1.0)).unsqueeze(-1) * mask
+    else:
+        return torch.sqrt(m2).unsqueeze(-1) * mask
+
 def get_mass(xi, xj, mask, is_log=False):
     m2 = (
         2
@@ -76,7 +92,6 @@ def get_mass(xi, xj, mask, is_log=False):
         return torch.log(torch.where(m2 > 0, m2, 1.0)).unsqueeze(-1) * mask
     else:
         return torch.sqrt(m2).unsqueeze(-1) * mask
-
 
 def get_dr(xi, xj, mask, is_log=True):
     d_eta = xi[:, :, :, 0] - xj[:, :, :, 0]
@@ -165,7 +180,7 @@ class InteractionBlock(nn.Module):
         #NOTE g4 dataset does not containg tranverse momentum PT, so maybe get_kt also does not make sense?
         x_int = torch.cat(
             [
-                get_mass(xi, xj, mask_event, is_log=True),
+                get_mass2(xi, xj, mask_event, is_log=True),
                 get_dr(xi, xj, mask_event, is_log=True),
                 get_kt(xi, xj, mask_event, is_log=True),
             ],
@@ -275,9 +290,9 @@ class LocalEmbeddingBlock(nn.Module):
                 torch.cat(
                     [
                         local_features,
-                        get_mass(knn_fts_center, neighbors, mask_neighbors, is_log=True),
-                        get_dr(knn_fts_center, neighbors, mask_neighbors, is_log=True),
-                        get_kt(knn_fts_center, neighbors, mask_neighbors, is_log=True),
+                        get_mass(knn_fts_center, neighbors, mask_neighbors, is_log=False),
+                        get_dr(knn_fts_center, neighbors, mask_neighbors, is_log=False),
+                        get_kt(knn_fts_center, neighbors, mask_neighbors, is_log=False),
                     ],
                     -1,
                 )

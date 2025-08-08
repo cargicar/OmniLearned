@@ -259,6 +259,7 @@ def load_data(
             print(f"Creating index list for dataset {names[iname]}")
             file_indices = []
             # Precompute indices for efficient access
+            #NOTE somewhere aorund here take ages!
             for file_idx, path in enumerate(h5_files):
                 try:
                     with h5py.File(path, "r") as f:

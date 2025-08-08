@@ -335,9 +335,12 @@ def test_step(
             for key in ["cond", "pid", "add_info"]
             if key in batch
         }
-        with torch.no_grad():
-            outputs = model(X, y, **model_kwargs)
-
+        try:
+            with torch.no_grad():
+                outputs = model(X, y, **model_kwargs)
+        except Exception as e:
+            print(f"batch_idx [{batch_idx}] skiped: Exception during model inference: {e}")
+            continue
         loss = 0
 
         if outputs["y_pred"] is not None:

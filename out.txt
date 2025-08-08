@@ -1,21 +1,3022 @@
-/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/cuda/__init__.py:174: UserWarning: CUDA initialization: CUDA unknown error - this may be due to an incorrectly set up environment, e.g. changing env variable CUDA_VISIBLE_DEVICES after program start. Setting the available devices to be zero. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:109.)
-  return torch._C._cuda_getDeviceCount() > 0
 **** Setup ****
 Total params: 0.62M
-Training on device: cpu, with 1 GPUs
+Training on device: cuda:0, with 1 GPUs
 ************
 **** Setup ****
-Train dataset len: 5994
+Train dataset len: 3996
 ************
-/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/cuda/__init__.py:174: UserWarning: CUDA initialization: CUDA unknown error - this may be due to an incorrectly set up environment, e.g. changing env variable CUDA_VISIBLE_DEVICES after program start. Setting the available devices to be zero. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:109.)
-  return torch._C._cuda_getDeviceCount() > 0
-No CUDA runtime is found, using CUDA_HOME='/usr'
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [4] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [9] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9407563209533691
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9438984394073486
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [41] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [43] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [48] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [64] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [73] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [92] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9414983987808228
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.942704677581787
+################3 loss nan
+batch_idx [100] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [107] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [119] skiped: Exception during model inference: selected index k out of range
+batch_idx [120] skiped: Exception during model inference: selected index k out of range
+batch_idx [121] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [135] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9429843425750732
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [145] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [158] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [161] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [174] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9421639442443848
+################3 loss nan
+################3 loss nan
+batch_idx [178] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [181] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9415907859802246
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9431219100952148
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9421758651733398
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [226] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [228] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [231] skiped: Exception during model inference: selected index k out of range
+batch_idx [232] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [237] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [252] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9416966438293457
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9399755001068115
+################3 loss nan
+################3 loss nan
+batch_idx [292] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [301] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [306] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss 1.940743327140808
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [318] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9432605504989624
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [337] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [342] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [346] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss 1.9431965351104736
+################3 loss nan
+################3 loss nan
+batch_idx [352] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9431419372558594
+################3 loss nan
+################3 loss 1.9423167705535889
+################3 loss nan
+################3 loss nan
+batch_idx [362] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.94169020652771
+batch_idx [365] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9423620700836182
+################3 loss nan
+################3 loss nan
+batch_idx [372] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.943983793258667
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [396] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [399] skiped: Exception during model inference: selected index k out of range
+batch_idx [400] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [406] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [408] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9443697929382324
+################3 loss 1.9438858032226562
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [424] skiped: Exception during model inference: selected index k out of range
+batch_idx [425] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [438] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [444] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [452] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [455] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [467] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9436733722686768
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [479] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [487] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [491] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [496] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9422461986541748
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.943083643913269
+batch_idx [514] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [516] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9416840076446533
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9442459344863892
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [531] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [539] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [547] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [551] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [557] skiped: Exception during model inference: selected index k out of range
+batch_idx [558] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [573] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [581] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [586] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [590] skiped: Exception during model inference: selected index k out of range
+batch_idx [591] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [600] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9391950368881226
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [614] skiped: Exception during model inference: selected index k out of range
+batch_idx [615] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [618] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [623] skiped: Exception during model inference: selected index k out of range
+batch_idx [624] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [647] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [673] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [680] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [691] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [699] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [707] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [730] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [738] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [743] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9441118240356445
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9395177364349365
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [771] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [784] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.94362211227417
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [793] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9424614906311035
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [799] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9438743591308594
+################3 loss nan
+batch_idx [803] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9439232349395752
+################3 loss nan
+batch_idx [825] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [827] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9418814182281494
+################3 loss nan
+################3 loss nan
+batch_idx [836] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [840] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.942833662033081
+################3 loss 1.9431633949279785
+################3 loss 1.9421427249908447
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [847] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9444544315338135
+batch_idx [857] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [859] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [863] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [870] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [891] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [896] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [899] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9433434009552002
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [911] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss 1.9427140951156616
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [921] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [925] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [935] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [941] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9446622133255005
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9426591396331787
+################3 loss nan
+################3 loss nan
+batch_idx [953] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9379961490631104
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9422283172607422
+################3 loss nan
+batch_idx [971] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [976] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9417051076889038
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [985] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [990] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9399992227554321
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [998] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1007] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1016] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9432557821273804
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1032] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9446232318878174
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1047] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1057] skiped: Exception during model inference: selected index k out of range
+batch_idx [1058] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1079] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1086] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [1088] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1093] skiped: Exception during model inference: selected index k out of range
+batch_idx [1094] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9432923793792725
+################3 loss 1.939518928527832
+################3 loss 1.9417122602462769
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.942305564880371
+batch_idx [1108] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1117] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss 1.940392255783081
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1126] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1134] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1148] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1153] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1172] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1181] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.940771460533142
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.940087080001831
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1208] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1213] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9389567375183105
+################3 loss 1.9406764507293701
+batch_idx [1216] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1252] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1271] skiped: Exception during model inference: selected index k out of range
+batch_idx [1272] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [1275] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9419476985931396
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1293] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1304] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1313] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [1315] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1321] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9415106773376465
+################3 loss nan
+batch_idx [1325] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1332] skiped: Exception during model inference: selected index k out of range
+batch_idx [1333] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9409582614898682
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9437670707702637
+################3 loss 1.9430584907531738
+################3 loss nan
+batch_idx [1359] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1366] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1374] skiped: Exception during model inference: selected index k out of range
+batch_idx [1375] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9425206184387207
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1391] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [1393] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1398] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1402] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1411] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9418189525604248
+################3 loss nan
+################3 loss nan
+batch_idx [1419] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [1422] skiped: Exception during model inference: selected index k out of range
+batch_idx [1423] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9425277709960938
+batch_idx [1426] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1439] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [1441] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [1444] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1452] skiped: Exception during model inference: selected index k out of range
+batch_idx [1453] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.944307804107666
+################3 loss nan
+batch_idx [1460] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [1463] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1468] skiped: Exception during model inference: selected index k out of range
+batch_idx [1469] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9425785541534424
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1498] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1506] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1514] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1520] skiped: Exception during model inference: selected index k out of range
+batch_idx [1521] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9396955966949463
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1526] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9379128217697144
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1541] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1549] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1553] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1557] skiped: Exception during model inference: selected index k out of range
+batch_idx [1558] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [1560] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1576] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9432369470596313
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1585] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1597] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss 1.9424960613250732
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1606] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [1608] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1616] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9412471055984497
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1641] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1658] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.943847417831421
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1672] skiped: Exception during model inference: selected index k out of range
+batch_idx [1673] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [1675] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1684] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9399291276931763
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9401426315307617
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.943589687347412
+################3 loss nan
+################3 loss 1.9407984018325806
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1743] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1747] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1761] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [1763] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1769] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1778] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9422816038131714
+################3 loss nan
+################3 loss nan
+batch_idx [1790] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [1793] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9422788619995117
+################3 loss nan
+################3 loss nan
+################3 loss 1.943025827407837
+################3 loss 1.9439997673034668
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9409966468811035
+################3 loss nan
+################3 loss nan
+batch_idx [1822] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9442713260650635
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9414360523223877
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1845] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9415044784545898
+################3 loss nan
+################3 loss nan
+batch_idx [1853] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9428141117095947
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1872] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1877] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [1880] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1885] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1891] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1897] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1905] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1911] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9422080516815186
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1929] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9449305534362793
+batch_idx [1932] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1954] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [1957] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1961] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1968] skiped: Exception during model inference: selected index k out of range
+batch_idx [1969] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9406616687774658
+batch_idx [1972] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1977] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss 1.9430326223373413
+################3 loss nan
+################3 loss nan
+batch_idx [1983] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [1986] skiped: Exception during model inference: selected index k out of range
+batch_idx [1987] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [1994] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2002] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2008] skiped: Exception during model inference: selected index k out of range
+batch_idx [2009] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2013] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9432568550109863
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9417177438735962
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2045] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9427701234817505
+################3 loss nan
+batch_idx [2052] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2059] skiped: Exception during model inference: selected index k out of range
+batch_idx [2060] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2062] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.943068027496338
+################3 loss nan
+################3 loss nan
+batch_idx [2067] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2075] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2080] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2090] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9431662559509277
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2103] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [2106] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9426724910736084
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2124] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2134] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9402443170547485
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2152] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2169] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9399663209915161
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2195] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9421534538269043
+batch_idx [2203] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2224] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2228] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9440255165100098
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2239] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2245] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9410920143127441
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9415488243103027
+################3 loss nan
+batch_idx [2260] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9408797025680542
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9418001174926758
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2296] skiped: Exception during model inference: selected index k out of range
+batch_idx [2297] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.94244384765625
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2341] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9416561126708984
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9373867511749268
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2370] skiped: Exception during model inference: selected index k out of range
+batch_idx [2371] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2375] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9419524669647217
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2382] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9428205490112305
+################3 loss nan
+################3 loss 1.9393081665039062
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2416] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2426] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9424105882644653
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2433] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2441] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [2444] skiped: Exception during model inference: selected index k out of range
+batch_idx [2445] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9434411525726318
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2457] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2465] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss 1.9421319961547852
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2485] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2490] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2498] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9458208084106445
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2509] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2516] skiped: Exception during model inference: selected index k out of range
+batch_idx [2517] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2531] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2537] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2539] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2557] skiped: Exception during model inference: selected index k out of range
+batch_idx [2558] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2566] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.943647027015686
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2572] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [2575] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2584] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9404221773147583
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9409598112106323
+################3 loss nan
+################3 loss 1.942123532295227
+################3 loss 1.9428300857543945
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.941375732421875
+################3 loss nan
+batch_idx [2606] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2612] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9400687217712402
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2630] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9425749778747559
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2662] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2675] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2681] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2696] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2698] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9419325590133667
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2709] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2711] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [2714] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9424121379852295
+batch_idx [2731] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2739] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2778] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.94252610206604
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2806] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2821] skiped: Exception during model inference: selected index k out of range
+batch_idx [2822] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss 1.9439871311187744
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9422638416290283
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2837] skiped: Exception during model inference: selected index k out of range
+batch_idx [2838] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2840] skiped: Exception during model inference: selected index k out of range
+batch_idx [2841] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9423651695251465
+################3 loss nan
+################3 loss nan
+################3 loss 1.9437994956970215
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2866] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2871] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2879] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2894] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2902] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2913] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2915] skiped: Exception during model inference: selected index k out of range
+################3 loss 1.9414571523666382
+################3 loss nan
+batch_idx [2918] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+batch_idx [2921] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2926] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2931] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9416112899780273
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2947] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2949] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2951] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9418697357177734
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2979] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss 1.9421296119689941
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+################3 loss nan
+batch_idx [2993] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+batch_idx [2995] skiped: Exception during model inference: selected index k out of range
+################3 loss nan
+Epoch [1/15] Loss: nan, Val Loss: nan , lr: 0.0005Epoch [1/15] Loss: nan, Val Loss: nan , lr: 0.0005
+Class Loss: nan, Class Val Loss: nan
+Class Event Loss: 0.0000, Class Event Val Loss: 0.0000
+Gen Loss: 0.0000, Gen Val Loss: 0.0000
+Class Perturb Loss: 0.0000, Class Val Perturb Loss: 0.0000
+CLIP loss: 0.0000, CLIP Val Loss: 0.0000
+Time taken for epoch 0 is 122.45775556564331 sec
+replacing best checkpoint ...
+Epoch 1 | Training checkpoint saved at ../../../saved_models/best_model_test.pt
 [rank0]: Traceback (most recent call last):
-[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 847, in <module>
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 850, in <module>
 [rank0]:     main()
-[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 823, in main
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 826, in main
 [rank0]:     train_model(
-[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 459, in train_model
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 462, in train_model
 [rank0]:     train_logs = train_step(
 [rank0]:                  ^^^^^^^^^^^
 [rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/train.py", line 193, in train_step
@@ -57,7 +3058,8 @@ No CUDA runtime is found, using CUDA_HOME='/usr'
 [rank0]:   File "/home/carlos/miniforge3/envs/diffusion/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
 [rank0]:     return forward_call(*args, **kwargs)
 [rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/layers.py", line 260, in forward
-[rank0]:     indices = indices + idx_base
-[rank0]:               ~~~~~~~~^~~~~~~~~~
-[rank0]: TypeError: unsupported operand type(s) for +: 'NoneType' and 'Tensor'
+[rank0]:   File "/home/carlos/Rnet_local/diffusion_and_g4/omnilearn_local/OmniLearned/src/omnilearned/layers.py", line 268, in forward
+[rank0]:     torch.arange(0, batch_size, device=features.device).view(-1, 1, 1)
+[rank0]:     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: KeyboardInterrupt
+[rank0]:[W807 12:56:30.169932882 ProcessGroupNCCL.cpp:1479] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
