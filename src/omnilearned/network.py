@@ -134,6 +134,7 @@ class PET2(nn.Module):
             z_pred = self.generator(z_body, y)
 
         if self.mode == "classifier" or self.mode == "pretrain":
+            # x_body = [B, global_emb+local_emb, mlp_out_channels]
             x_body = self.body(x, cond, pid, add_info, torch.zeros_like(time))
             y_pred = self.classifier(x_body)
             if self.mode == "pretrain":
@@ -456,7 +457,9 @@ class PET_body(nn.Module):
         x_embed, x = self.embed(x, cond, mask)
 
         # Move away zero-padded entries
-        coord_shift = 999.0 * (~mask).float()
+        #TODo what does this do?
+        coord_shift = 999.0 * (~mask).float() 
+        # local featues : nearest neighbors of each point in the jet
         local_features, indices = self.local_physics(coord_shift + x[:, :, :2], x, mask)
 
         if self.use_int:
@@ -472,9 +475,11 @@ class PET_body(nn.Module):
         if add_info is not None and self.add_info:
             x = x + self.add_embed(add_info) * mask
 
+        #conditional embedding: [B, jet_fetures] -> [B, mlp_out_channels=64]
+        cond_emb= self.cond_embed(cond) 
         if cond is not None and self.conditional:
             # Conditional information: jet level quantities for example
-            x = torch.cat([self.cond_embed(cond).unsqueeze(1), x], 1)
+            x = torch.cat([cond_emb(cond).unsqueeze(1), x], 1)
 
         if self.use_time and time is not None:
             # Create time token

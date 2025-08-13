@@ -185,7 +185,15 @@ def train_step(
             for key in ["cond", "pid", "add_info"]
             if key in batch
         }
+        # batch; dict {x:[B,Number_points,points_features] =[number of jets, number of point per jet (max user allowed), individual point features ], 
+        #              y :[B,] = [class_per_jet]
+        #              cond: [B, num_cond] = [number of jets, jet features],
+        #             pid: None (?),
+        #             add_info: None (?),}
 
+        #model_kwargs = cond: [B, num_cond] = [number of jets, jet features],
+        #             pid: None (?),
+        #             add_info: None (?),}
         with amp.autocast(
             "cuda:{}".format(device) if torch.cuda.is_available() else "cpu",
             enabled=use_amp,

@@ -139,6 +139,7 @@ class InputBlock(nn.Module):
 
     def forward(self, x, j, mask):
         if j is not None and self.use_cond:
+            #x_physics = relative distance between particle and jet?
             x_physics = torch.stack(
                 [
                     x[:, :, 2] - j[:, 0].unsqueeze(-1),
@@ -147,9 +148,11 @@ class InputBlock(nn.Module):
                 ],
                 -1,
             )
-            x = torch.cat([x, x_physics], -1)
+            # x_physics: [B, num_particles,3]
+            # cat(x, x_physics): [B, num_particles, in_features + 3]
+            x = torch.cat([x, x_physics], -1) 
 
-        x_mlp = self.mlp(self.norm(x), mask)
+        x_mlp = self.mlp(self.norm(x), mask) ## mlp(in_channesl=in_features + 3 + x_physics if use_cond else in_features, hidden_features=hidden_features, out_channels=out_features)
         return x_mlp, x
 
 
@@ -256,12 +259,16 @@ class LocalEmbeddingBlock(nn.Module):
         return D
 
     def forward(self, points, features, mask, indices=None):
+        #points = [B, num_points, 2] = [number of jets, number of point per jet (max user allowed), spatial position (\theta, phi)]
+        # why points are 2d?
+        # x: [B, num_points, in_features = 9] = [number of jets, number of point per jet (max user allowed), individual point features ]
         batch_size, num_points, num_dims = features.shape
         if indices is None:
             distances = self.pairwise_distance(
                 points
             )  # uses custom pairwise function, not torch.cdist
             _, indices = torch.topk(-distances, k=self.K + 1, dim=-1)
+            # indices of the smallest distances
             indices = indices[:, :, 1:]  # Exclude self
 
             idx_base = (
@@ -278,8 +285,9 @@ class LocalEmbeddingBlock(nn.Module):
 
         mask_neighbors = mask.view(batch_size * num_points, -1)[indices, :]
         mask_neighbors = mask_neighbors.view(batch_size, num_points, self.K, 1)
-
+        #knn_fts_center = [B, num_points, k_closest_neightbor_per_point, in_features]
         knn_fts_center = features.unsqueeze(2).expand_as(neighbors)
+        #local_features = 
         local_features = knn_fts_center - neighbors
 
         if self.physics:
@@ -307,7 +315,7 @@ class LocalEmbeddingBlock(nn.Module):
         attn_mask = attn_mask.float() * -1e9
 
         x = self.mlp(local_features) * mask_neighbors
-
+        # x: [B*num_points, K, out_features]
         for ib, blk in enumerate(self.in_blocks):
             x = blk(x, mask=mask_neighbors, attn_mask=attn_mask)
 
@@ -403,7 +411,7 @@ class AttBlock(nn.Module):
 
         x = (
             x
-            + self.attn(
+            + self.attn( #self.attn: in_features= 64, out-features=64, num_heads=8
                 query=x_norm,
                 key=x_norm,
                 value=x_norm,
