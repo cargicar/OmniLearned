@@ -15,6 +15,16 @@ synsetid_to_cate = {'02691156': 'Airplane', '02773838': 'Bag', '02801938': 'Bask
                     '04225987': 'Skateboard', '04256520': 'Sofa', '04330267': 'Stove', '04530566': 'Vessel', '04554684': 'Washer', '02992529': 'Cellphone', '02843684': 'Birdhouse', '02871439': 'Bookshelf'}
 cate_to_synsetid = {v: k for k, v in synsetid_to_cate.items()}
 
+int_classes = {'Airplane': 0, 'Bag': 1, 'Basket': 2, 'Bathtub': 3, 'Bed': 4, 'Bench': 5, 'Bottle': 6, 
+               'Bowl': 7, 'Bus': 8, 'Cabinet': 9, 'Can': 10, 'Camera': 11, 'Cap': 12, 'Car': 13, 
+               'Chair': 14, 'Clock': 15, 'Dishwasher': 16, 'Monitor': 17, 'Table': 18, 'Telephone': 19, 
+               'Tin_can': 20, 'Tower': 21, 'Train': 22, 'Keyboard': 23, 'Earphone': 24, 'Faucet': 25, 
+               'File': 26, 'Guitar': 27, 'Helmet': 28, 'Jar': 29, 'Knife': 30, 'Lamp': 31, 'Laptop': 32, 
+               'Speaker': 33, 'Mailbox': 34, 'Microphone': 35, 'Microwave': 36, 'Motorcycle': 37, 
+               'Mug': 38, 'Piano': 39, 'Pillow': 40, 'Pistol': 41, 'Pot': 42, 'Printer': 43, 
+               'Remote_control': 44, 'Rifle': 45, 'Rocket': 46, 'Skateboard': 47, 'Sofa': 48, 
+               'Stove': 49, 'Vessel': 50, 'Washer': 51, 'Cellphone': 52, 'Birdhouse': 53, 'Bookshelf': 54}
+
 class ShapeNetCore(Dataset):
 
     def __init__(self, path, cates, split, scale_mode, transform=None):
@@ -151,7 +161,7 @@ class ShapeNetCore(Dataset):
 
         data = {
             'pointcloud': pc,
-            'cate': cate_name,
+            'cate': int_classes[cate_name],
             'id': idx, # Use index as a unique ID for this split
             'shift': shift,
             'scale': scale

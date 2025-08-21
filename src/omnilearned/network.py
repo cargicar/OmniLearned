@@ -451,7 +451,8 @@ class PET_body(nn.Module):
 
     def forward(self, x, cond=None, pid=None, add_info=None, time=None):
         B = x.shape[0]
-        mask = x[:, :, 3:4] != 0
+        #mask = x[:, :, 3:4] != 0
+        mask = x[:, :, 2:3] != 0 #NOTE changed to accomodate shapenet which only have 3 features
         token = self.token.expand(B, -1, -1)
 
         x_embed, x = self.embed(x, cond, mask)

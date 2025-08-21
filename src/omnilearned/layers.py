@@ -151,7 +151,6 @@ class InputBlock(nn.Module):
             # x_physics: [B, num_particles,3]
             # cat(x, x_physics): [B, num_particles, in_features + 3]
             x = torch.cat([x, x_physics], -1) 
-
         x_mlp = self.mlp(self.norm(x), mask) ## mlp(in_channesl=in_features + 3 + x_physics if use_cond else in_features, hidden_features=hidden_features, out_channels=out_features)
         return x_mlp, x
 

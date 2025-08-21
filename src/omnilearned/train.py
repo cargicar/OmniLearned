@@ -65,10 +65,10 @@ def parse_arguments():
                         help="Resume training from the latest checkpoint in outdir/save_tag.")
 
     # --- Data/Feature Arguments ---
-    parser.add_argument('--categories', type=list, default=['airplane'])
+    parser.add_argument('--categories', type=list, default=['Airplane', 'Bag', 'Basket'])
     parser.add_argument('--scale_mode', type=str, default='shape_unit')
 
-    parser.add_argument("--num_feat", type=int, default=4,
+    parser.add_argument("--num_feat", type=int, default=3,
                         help="Number of features per particle/vector (e.g., 4 for 4-vectors).")
     parser.add_argument("--conditional", action="store_true",
                         help="Enable conditional generation/training.")
@@ -189,8 +189,9 @@ def train_step(
 
         # for batch_idx, batch in enumerate(dataloader):
         optimizer.zero_grad()  # Zero the gradients
-        breakpoint()
-        X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        X = batch["pointcloud"].to(device, dtype=torch.float)
+        y = batch["cate"].to(device)
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -729,6 +730,7 @@ def main():
     #     rank=rank,
     #     size=size,
     # )
+    #FIXME hardcoded path for dev and deb
     dataset_path = f"/home/carlos/Rnet_local/datasets/shapenetCore/"
     train_dset = ShapeNetCore(
         path=dataset_path,
