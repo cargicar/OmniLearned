@@ -477,8 +477,8 @@ class PET_body(nn.Module):
             x = x + self.add_embed(add_info) * mask
 
         #conditional embedding: [B, jet_fetures] -> [B, mlp_out_channels=64]
-        cond_emb= self.cond_embed(cond) 
         if cond is not None and self.conditional:
+            cond_emb= self.cond_embed(cond) 
             # Conditional information: jet level quantities for example
             x = torch.cat([cond_emb(cond).unsqueeze(1), x], 1)
 
@@ -489,6 +489,9 @@ class PET_body(nn.Module):
         x = torch.cat([token, x], 1)
 
         # Create a new mask based on the updated point cloud with additional tokens
+
+        #mask = x[:, :, 3:4] != 0
+        #FIXME edited to make compatible with shapecorenet
         mask = x[:, :, 3:4] != 0
 
         attn_mask = mask.float() @ mask.float().transpose(-1, -2)

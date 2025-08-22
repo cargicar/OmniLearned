@@ -2,3 +2,4 @@ dist/
 src/omnilearned/_version.py
 __pycache__
 .vscode/
+*.txt

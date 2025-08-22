@@ -220,11 +220,11 @@ def train_step(
                         logs["loss_class"] += loss_class.detach()
                         loss = loss + loss_class
                 else:
-                    #FIXME
-                    #loss_class = class_cost(outputs["y_pred"], y).mean()
-                    # for G4 use
-                    y_int = torch.argmax(y, dim=1)
-                    loss_class = class_cost(outputs["y_pred"], y_int).mean()
+                    
+                    loss_class = class_cost(outputs["y_pred"], y).mean()
+                    #FIXME for G4 use
+                    #y_int = torch.argmax(y, dim=1)
+                    #loss_class = class_cost(outputs["y_pred"], y_int).mean()
                     loss = loss + loss_class
                     logs["loss_class"] += loss_class.detach()
             if outputs["z_pred"] is not None:
@@ -339,8 +339,9 @@ def test_step(
             batch = next(data_iter)
         
         # for batch_idx, batch in enumerate(dataloader):
-        breakpoint()
-        X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        X = batch["pointcloud"].to(device, dtype=torch.float)
+        y = batch["cate"].to(device)
         
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
@@ -371,8 +372,10 @@ def test_step(
                     logs["loss_class"] += loss_class.detach()
                     loss = loss + loss_class
             else:
-                y_int_labels = torch.argmax(y, dim=1)
-                loss_class = class_cost(outputs["y_pred"], y_int_labels).mean()
+                loss_class = class_cost(outputs["y_pred"], y).mean()
+                #FIXME
+                #y_int_labels = torch.argmax(y, dim=1)
+                #loss_class = class_cost(outputs["y_pred"], y_int_labels).mean()
                 loss = loss + loss_class
                 logs["loss_class"] += loss_class.detach()
         if outputs["z_pred"] is not None:
@@ -420,7 +423,7 @@ def test_step(
             loss = loss + loss_clip
             logs["loss_clip"] += loss_clip.detach()
 
-        print(f"################3 loss {loss.detach()}")
+        #print(f"################3 loss {loss.detach()}")
         logs["loss"] += loss.detach()
 
     if dist.is_initialized():
@@ -662,8 +665,7 @@ def restore_checkpoint(
     return startEpoch, best_loss
 
 
-def main():
-    args = parse_arguments()
+def main(args):
     local_rank, rank, size = ddp_setup()
     # set up model
     model = PET2(
@@ -687,7 +689,6 @@ def main():
         mode=args.mode,
         num_classes=args.num_classes,
     )
-
     if rank == 0:
         d = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         print("**** Setup ****")
@@ -890,4 +891,5 @@ def main():
     dist.destroy_process_group()
 
 if __name__ == "__main__":
-    main()
+    args = parse_arguments()
+    main(args)
