@@ -40,10 +40,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 
     # --- General/Output Arguments ---
-    # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models",
-    #                     help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
-                        help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models",
+                         help="Output directory for logs, checkpoints, and results.")
+    #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
+    #                    help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
@@ -72,6 +72,9 @@ def parse_arguments():
                         help="Number of features per particle/vector (e.g., 4 for 4-vectors).")
     parser.add_argument("--conditional", action="store_true",
                         help="Enable conditional generation/training.")
+    
+    parser.add_argument("--use_interaction", action="store_true",
+                        help="Enable interaction block.")
     parser.add_argument("--num_cond", type=int, default=3,
                         help="Number of conditioning features/dimensions.")
     parser.add_argument("--use_pid", action="store_true",
@@ -680,6 +683,7 @@ def main(args):
         feature_drop=args.feature_drop,
         num_tokens=args.num_tokens,
         K=args.K,
+        use_int=args.use_interaction,
         conditional=args.conditional,
         cond_dim=args.num_cond,
         pid=args.use_pid,
@@ -732,7 +736,8 @@ def main(args):
     #     size=size,
     # )
     #FIXME hardcoded path for dev and deb
-    dataset_path = f"/home/carlos/Rnet_local/datasets/shapenetCore/"
+    #dataset_path = f"/home/carlos/Rnet_local/datasets/shapenetCore/"
+    dataset_path = f"/pscratch/sd/c/ccardona/datasets/shapenetCore/"
     train_dset = ShapeNetCore(
         path=dataset_path,
         cates=args.categories,

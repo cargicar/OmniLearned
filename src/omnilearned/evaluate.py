@@ -41,10 +41,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 
     # --- General/Output Arguments ---
-    # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models",
+    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models",
+                         help="Output directory for logs, checkpoints, and results.")
+    # parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                     help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
-                        help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
@@ -260,9 +260,8 @@ def test_step(
         }
         with torch.no_grad():
             outputs = model(X, y, **model_kwargs)
-            breakpoint()
-            plot_batch_3d(outputs["x_body"], title = "from model x_body")
-
+            #plot_batch_3d(outputs["x_body"], title = "from model x_body")
+            plot_batch_3d(outputs["z_body"], title = "from model z_body")
         preds.append(outputs["y_pred"])
         labels.append(y)
         masses.append(torch.exp(batch["cond"][:, 1]))
@@ -349,7 +348,8 @@ def main(args):
     #     size=size,
     # )
     #FIXME hardcoded path for dev and deb
-    dataset_path = f"/home/carlos/Rnet_local/datasets/shapenetCore/"
+    #dataset_path = f"/home/carlos/Rnet_local/datasets/shapenetCore/"
+    dataset_path = f"/pscratch/sd/c/ccardona/datasets/shapenetCore/"
     val_dset = ShapeNetCore(
         path=dataset_path,
         cates=args.categories,

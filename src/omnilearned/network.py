@@ -30,7 +30,7 @@ class PET2(nn.Module):
         feature_drop=0.0,
         num_tokens=4,
         K=15,
-        use_int=True,
+        use_int=False,
         conditional=False,
         cond_dim=3,
         pid=False,
