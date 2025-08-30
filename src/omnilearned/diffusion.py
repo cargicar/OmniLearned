@@ -40,3 +40,73 @@ def perturb(x, time):
     z = alpha * x + eps * sigma
     v = alpha * eps - sigma * x
     return z * mask, v * mask
+
+
+
+########################################################################
+#################### Added for Shapenet branch #########################
+# --- Sampler Function ---
+def sampler(model, X, y, num_steps, num_points, model_kwargs, batch_size=64, device = "cuda", cond=None, pid=None, add_info=None):
+    """
+    Samples a clean point cloud from random Gaussian noise.
+
+    Args:
+        model: The trained diffusion model.
+        num_steps: The number of denoising steps.
+        Z: A random Gaussian noise tensor of shape [batch_size, num_points, 3].
+        y: A tensor of shape [batch_size, num_classes] for one-hot encoding.
+        cond: An optional tensor for conditional information.
+        pid: An optional tensor for point cloud ID.
+        add_info: Optional additional information tensor.
+
+    Returns:
+        The denoised point cloud tensor.
+    """
+    
+    with torch.no_grad():
+
+        #x_T = torch.randn([batch_size, num_points]).to(context.device)
+        x = torch.randn_like(X)
+        #traj = {self.var_sched.num_steps: x_T}# Start with the input noise
+        # We sample from a high time (e.g., 1.0) down to a low time (e.g., epsilon)
+        #time = torch.rand(size=(x.shape[0],)).to(x.device)
+        timesteps = torch.linspace(1.0, 0.0, num_steps + 1).to(device)
+        
+        for i in range(num_steps):
+            # Get current time and previous time
+            t_current = timesteps[i]
+            t_prev = timesteps[i+1]
+            
+            # Reshape time for model input
+            t_current_tensor = torch.full((x.shape[0],), t_current).to(device)
+            t_prev_tensor = torch.full((x.shape[0],), t_prev).to(device)
+            # Get alpha and sigma for the current and previous timesteps
+            _, alpha_current, sigma_current = get_logsnr_alpha_sigma(t_current_tensor)
+            _, alpha_prev, sigma_prev = get_logsnr_alpha_sigma(t_prev_tensor)
+
+            # Predict the velocity
+            # The model's body takes the noisy data and conditions
+            z_body = model.module.body(x, cond, pid, add_info, t_current_tensor)
+            # The generator predicts the velocity
+            z_pred_v = model.module.generator(z_body, y)
+            #output_dic = model(x,y, **model_kwargs) # Doing from the whole model is weird. Does not take time?  
+            #z_pred_v = output_dic["z_pred"]
+            # --- Denoising Step ---
+            # This is a simplified reverse step using a velocity-based update.
+            # You can think of the predicted velocity as a direction to move.
+            # The update rule needs to be derived from your specific diffusion process.
+            # A common DDIM-style update might look like this:
+            
+            # Predict the "clean" data from the noisy data and predicted velocity
+            # A clean-data estimate 'x0_hat' can be derived from the velocity
+            # Assuming `v = - (sigma/alpha) * eps`, and `z = alpha*x + sigma*eps`
+            # We can find `eps` and then `x`
+            eps_pred = - (alpha_current / sigma_current) * z_pred_v
+            x0_hat = (x - sigma_current * eps_pred) / alpha_current
+            
+            # Update the point cloud for the next step
+            # The next state is a combination of the clean data estimate and noise
+            x = alpha_prev * x0_hat + sigma_prev * eps_pred
+            breakpoint()
+    return x
+
