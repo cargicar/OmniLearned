@@ -98,7 +98,7 @@ def parse_arguments():
                         help="Enable gradient clipping.")
     parser.add_argument("--use_event_loss", action="store_true",
                         help="Enable event-level loss calculation.")
-    parser.add_argument("--num_classes", type=int, default=2,
+    parser.add_argument("--num_classes", type=int, default=len(cats),
                         help="Number of output classes for classification tasks.")
     parser.add_argument("--mode", type=str, default="generator",
                         choices=["classifier", "generator", "other_mode_if_any"], # Add valid choices
