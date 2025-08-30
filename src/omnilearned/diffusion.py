@@ -70,21 +70,30 @@ def sampler(model, X, y, num_steps, num_points, model_kwargs, device = "cuda", c
         x = torch.randn_like(X)
         #traj = {self.var_sched.num_steps: x_T}# Start with the input noise
         # We sample from a high time (e.g., 1.0) down to a low time (e.g., epsilon)
+        data_shape = x.shape
         batch_size= x.shape[0]
         timesteps = torch.linspace(1.0, 0.0, num_steps + 1).to(device)
         
         for time_step in torch.arange(num_steps, 0, -1):
-            t = torch.ones((batch_size, 1)).to(x.device) * time_step / num_steps
-            t_prev = torch.ones((batch_size, 1)).to(x.device) * (time_step - 1) / num_steps
+            #time = torch.rand(size=(x.shape[0],)).to(x.device) #training time
+            t = torch.ones((batch_size, )).to(x.device) * time_step / num_steps
+            t_prev = torch.ones((batch_size, )).to(x.device) * (time_step - 1) / num_steps
 
             # Get logsnr, alpha, and sigma for current and previous timesteps
-            logsnr_t, alpha, sigma =get_logsnr_alpha_sigma(t, shape=const_shape)
-            logsnr_s, alpha_s, sigma_s = get_logsnr_alpha_sigma(t_prev, shape=const_shape)
-
-            v = model(x, t, cond)
-
+            logsnr_t, alpha, sigma =get_logsnr_alpha_sigma(t)
+            logsnr_s, alpha_s, sigma_s = get_logsnr_alpha_sigma(t_prev)
+            #v = model(x, t, cond)
+            # Predict the velocity
+            # The model's body takes the noisy data and conditions
+            z_body = model.module.body(x, cond, pid, add_info, t)
+            # The generator predicts the velocity
+            z_pred_v = model.module.generator(z_body, y)
+            #output_dic = model(x,y, **model_kwargs) # Doing from the whole model is weird. Does not take time?  
+            #z_pred_v = output_dic["z_pred"]
+            # --- Denoising Step ---
+            
             # Predict the noise-free data (x_0)
-            pred_x = alpha * x - sigma * v
+            pred_x = alpha * x - sigma * z_pred_v
 
             # Calculate the mean and standard deviation for the next step (x_{t-1})
             alpha_st = torch.sqrt((1. + torch.exp(-logsnr_t)) / (1. + torch.exp(-logsnr_s)))

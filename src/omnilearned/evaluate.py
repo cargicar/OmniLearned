@@ -30,6 +30,7 @@ from dataset import ShapeNetCore
 
 import argparse
 import os # Import os for default path if needed
+from diffusion import sampler
 
 def parse_arguments():
     """
@@ -41,7 +42,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 
     # --- General/Output Arguments ---
-    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models",
+    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/",
                          help="Output directory for logs, checkpoints, and results.")
     # parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                     help="Output directory for logs, checkpoints, and results.")
@@ -89,7 +90,7 @@ def parse_arguments():
                         help="Enable event-level loss calculation.")
     parser.add_argument("--num_classes", type=int, default=2,
                         help="Number of output classes for classification tasks.")
-    parser.add_argument("--mode", type=str, default="classifier",
+    parser.add_argument("--mode", type=str, default="generator",
                         choices=["classifier", "generator", "other_mode_if_any"], # Add valid choices
                         help="Operating mode of the model (e.g., 'classifier', 'generator').")
     parser.add_argument("--num_workers", type=int, default=16,
@@ -275,6 +276,35 @@ def test_step(
     )
 
 
+def gen(
+    model,
+    dataloader,
+    device,
+):
+    model.eval()
+    pts = []
+    iterdata = iter(dataloader)
+    batch = next(iterdata)
+    #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+    X = batch["pointcloud"].to(device, dtype=torch.float)
+    y = batch["cate"].to(device)
+    plot_batch_3d(X, title = "from dataset")
+    model_kwargs = {
+        key: (batch[key].to(device) if batch[key] is not None else None)
+        for key in ["cond", "pid", "add_info"]
+        if key in batch
+    }
+    with torch.no_grad():
+        pts = sampler(model, X, y, 1000, 500, model_kwargs)
+        #plot_batch_3d(outputs["x_body"], title = "from model x_body")
+        plot_batch_3d(pts, title = "from model sampler")
+    
+    # return (
+    #     torch.cat(pts).to(device),
+    # )
+
+
+
 def restore_checkpoint(
     model,
     checkpoint_dir,
@@ -401,7 +431,9 @@ def main(args):
         **kwarg,
     )
 
-    eval_model(model, val_loader, device=device)
+    #eval_model(model, val_loader, device=device)
+    gen(model, val_loader, device)
+
     dist.destroy_process_group()
 
 

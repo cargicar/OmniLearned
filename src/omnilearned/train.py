@@ -30,6 +30,15 @@ torch._dynamo.config.verbose = False
 import argparse
 import os # Import os for default path if needed
 
+
+cats = ['Airplane', 'Bag', 'Basket', 'Bathtub', 'Bed', 'Bench', 'Bottle', 'Bowl', 'Bus', 
+        'Cabinet', 'Can', 'Camera', 'Cap', 'Car', 'Chair', 'Clock', 'Dishwasher', 'Monitor', 
+        'Table', 'Telephone', 'Tin_can', 'Tower', 'Train', 'Keyboard', 'Earphone', 'Faucet', 
+        'File', 'Guitar', 'Helmet', 'Jar', 'Knife', 'Lamp', 'Laptop', 'Speaker', 'Mailbox', 
+        'Microphone', 'Microwave', 'Motorcycle', 'Mug', 'Piano', 'Pillow', 'Pistol', 'Pot', 
+        'Printer', 'Remote_control', 'Rifle', 'Rocket', 'Skateboard', 'Sofa', 'Stove',
+        'Vessel', 'Washer', 'Cellphone', 'Birdhouse', 'Bookshelf']
+
 def parse_arguments():
     """
     Parses command-line arguments for the model training script.
@@ -40,7 +49,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 
     # --- General/Output Arguments ---
-    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models",
+    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/all_cats/",
                          help="Output directory for logs, checkpoints, and results.")
     #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                    help="Output directory for logs, checkpoints, and results.")
@@ -65,7 +74,7 @@ def parse_arguments():
                         help="Resume training from the latest checkpoint in outdir/save_tag.")
 
     # --- Data/Feature Arguments ---
-    parser.add_argument('--categories', type=list, default=['Airplane', 'Bag', 'Basket'])
+    parser.add_argument('--categories', type=list, default=cats)
     parser.add_argument('--scale_mode', type=str, default='shape_unit')
 
     parser.add_argument("--num_feat", type=int, default=3,
@@ -91,7 +100,7 @@ def parse_arguments():
                         help="Enable event-level loss calculation.")
     parser.add_argument("--num_classes", type=int, default=2,
                         help="Number of output classes for classification tasks.")
-    parser.add_argument("--mode", type=str, default="classifier",
+    parser.add_argument("--mode", type=str, default="generator",
                         choices=["classifier", "generator", "other_mode_if_any"], # Add valid choices
                         help="Operating mode of the model (e.g., 'classifier', 'generator').")
     parser.add_argument("--num_workers", type=int, default=16,
