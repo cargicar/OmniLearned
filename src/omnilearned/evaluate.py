@@ -32,6 +32,71 @@ import argparse
 import os # Import os for default path if needed
 from diffusion import sampler
 
+cats = ['Airplane', 'Bag', 'Basket', 'Bathtub', 'Bed', 'Bench', 'Bottle', 'Bowl', 'Bus', 
+        'Cabinet', 'Can', 'Camera', 'Cap', 'Car', 'Chair', 'Clock', 'Dishwasher', 'Monitor', 
+        'Table', 'Telephone', 'Tin_can', 'Tower', 'Train', 'Keyboard', 'Earphone', 'Faucet', 
+        'File', 'Guitar', 'Helmet', 'Jar', 'Knife', 'Lamp', 'Laptop', 'Speaker', 'Mailbox', 
+        'Microphone', 'Microwave', 'Motorcycle', 'Mug', 'Piano', 'Pillow', 'Pistol', 'Pot', 
+        'Printer', 'Remote_control', 'Rifle', 'Rocket', 'Skateboard', 'Sofa', 'Stove',
+        'Vessel', 'Washer', 'Cellphone', 'Birdhouse', 'Bookshelf']
+int__to_classes = {
+    0: 'Airplane',
+    1: 'Bag',
+    2: 'Basket',
+    3: 'Bathtub',
+    4: 'Bed',
+    5: 'Bench',
+    6: 'Bottle',
+    7: 'Bowl',
+    8: 'Bus',
+    9: 'Cabinet',
+    10: 'Can',
+    11: 'Camera',
+    12: 'Cap',
+    13: 'Car',
+    14: 'Chair',
+    15: 'Clock',
+    16: 'Dishwasher',
+    17: 'Monitor',
+    18: 'Table',
+    19: 'Telephone',
+    20: 'Tin_can',
+    21: 'Tower',
+    22: 'Train',
+    23: 'Keyboard',
+    24: 'Earphone',
+    25: 'Faucet',
+    26: 'File',
+    27: 'Guitar',
+    28: 'Helmet',
+    29: 'Jar',
+    30: 'Knife',
+    31: 'Lamp',
+    32: 'Laptop',
+    33: 'Speaker',
+    34: 'Mailbox',
+    35: 'Microphone',
+    36: 'Microwave',
+    37: 'Motorcycle',
+    38: 'Mug',
+    39: 'Piano',
+    40: 'Pillow',
+    41: 'Pistol',
+    42: 'Pot',
+    43: 'Printer',
+    44: 'Remote_control',
+    45: 'Rifle',
+    46: 'Rocket',
+    47: 'Skateboard',
+    48: 'Sofa',
+    49: 'Stove',
+    50: 'Vessel',
+    51: 'Washer',
+    52: 'Cellphone',
+    53: 'Birdhouse',
+    54: 'Bookshelf'
+}
+
 def parse_arguments():
     """
     Parses command-line arguments for the model training script.
@@ -42,10 +107,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 
     # --- General/Output Arguments ---
-    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/",
-                         help="Output directory for logs, checkpoints, and results.")
-    # parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
-    #                     help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/all_cats/",
+                         help="input dir for, checkpoints, and results.")
+    #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
+    #                    help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
@@ -67,13 +132,16 @@ def parse_arguments():
                         help="Resume training from the latest checkpoint in outdir/save_tag.")
 
     # --- Data/Feature Arguments ---
-    parser.add_argument('--categories', type=list, default=['Airplane', 'Bag', 'Basket'])
+    parser.add_argument('--categories', type=list, default=cats)
     parser.add_argument('--scale_mode', type=str, default='shape_unit')
 
     parser.add_argument("--num_feat", type=int, default=3,
                         help="Number of features per particle/vector (e.g., 4 for 4-vectors).")
     parser.add_argument("--conditional", action="store_true",
                         help="Enable conditional generation/training.")
+    
+    parser.add_argument("--use_interaction", action="store_true",
+                        help="Enable interaction block.")
     parser.add_argument("--num_cond", type=int, default=3,
                         help="Number of conditioning features/dimensions.")
     parser.add_argument("--use_pid", action="store_true",
@@ -88,7 +156,7 @@ def parse_arguments():
                         help="Enable gradient clipping.")
     parser.add_argument("--use_event_loss", action="store_true",
                         help="Enable event-level loss calculation.")
-    parser.add_argument("--num_classes", type=int, default=2,
+    parser.add_argument("--num_classes", type=int, default=len(cats),
                         help="Number of output classes for classification tasks.")
     parser.add_argument("--mode", type=str, default="generator",
                         choices=["classifier", "generator", "other_mode_if_any"], # Add valid choices
@@ -148,7 +216,9 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
-def plot_batch_3d(batch_of_point_clouds: torch.Tensor, title : str = "point_cloud"):
+
+
+def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, title="pointcloud"):
     """
     Plots each individual point cloud from a batch in a separate 3D scatter plot.
 
@@ -160,16 +230,15 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, title : str = "point_clou
     """
     # Get the batch size
     batch_size = batch_of_point_clouds.shape[0]
-
     # Loop through each point cloud in the batch
-    #for i in range(batch_size):
-    for i in range(3):
+    for i in range(batch_size):
+    #for i in range(num_samples):
         # Extract the current point cloud tensor
         # .detach() is used to remove it from the computation graph.
         # .cpu() ensures the tensor is on the CPU.
         # .numpy() converts the tensor to a NumPy array, which matplotlib requires.
         point_cloud = batch_of_point_clouds[i].detach().cpu().numpy()
-
+        category = int(cates[i].detach().cpu().numpy())
         # Separate the coordinates for plotting
         x = point_cloud[:, 0]
         y = point_cloud[:, 1]
@@ -186,10 +255,11 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, title : str = "point_clou
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
-        ax.set_title(f'Point Cloud {i+1} of {batch_size}')
+        ax.set_title(f'Point Cloud {i+1}, {title} of {int__to_classes[category]}')
         
         # Display the plot
-        plt.savefig(f"results/gen_{i}_{title}.png")
+        plt.savefig(f"results/gen_cate:_{title}_{int__to_classes[category]}.png")
+        plt.close()
 
 def gather_tensors(x):
     """
@@ -253,7 +323,7 @@ def test_step(
         #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
         X = batch["pointcloud"].to(device, dtype=torch.float)
         y = batch["cate"].to(device)
-        plot_batch_3d(X, title = "from dataset")
+        plot_batch_3d(X, y, title = "from dataset")
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -262,7 +332,7 @@ def test_step(
         with torch.no_grad():
             outputs = model(X, y, **model_kwargs)
             #plot_batch_3d(outputs["x_body"], title = "from model x_body")
-            plot_batch_3d(outputs["z_body"], title = "from model z_body")
+            plot_batch_3d(outputs["z_body"], y, title = "from model sampler")
         preds.append(outputs["y_pred"])
         labels.append(y)
         masses.append(torch.exp(batch["cond"][:, 1]))
@@ -288,7 +358,7 @@ def gen(
     #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
     X = batch["pointcloud"].to(device, dtype=torch.float)
     y = batch["cate"].to(device)
-    plot_batch_3d(X, title = "from dataset")
+    plot_batch_3d(X, y, title = "from dataset")
     model_kwargs = {
         key: (batch[key].to(device) if batch[key] is not None else None)
         for key in ["cond", "pid", "add_info"]
@@ -297,7 +367,7 @@ def gen(
     with torch.no_grad():
         pts = sampler(model, X, y, 1000, 500, model_kwargs)
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
-        plot_batch_3d(pts, title = "from model sampler")
+        plot_batch_3d(pts, y, title = "from model sampler")
     
     # return (
     #     torch.cat(pts).to(device),

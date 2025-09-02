@@ -49,8 +49,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 
     # --- General/Output Arguments ---
-    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/all_cats/",
+    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/",
                          help="Output directory for logs, checkpoints, and results.")
+    # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/all_cats/",
+    #                      help="Output directory for logs, checkpoints, and results.")
     #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                    help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="",

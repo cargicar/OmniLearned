@@ -124,7 +124,7 @@ class ShapeNetCore(Dataset):
         
         #FIXME
         # Define a fixed number of points for all point clouds
-        num_points = 500  # You can adjust this value
+        num_points = 1000  # You can adjust this value
 
         # Sample or pad the point cloud to the fixed size
         if pc.shape[0] > num_points:
