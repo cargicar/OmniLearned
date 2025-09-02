@@ -206,8 +206,7 @@ class PET_classifier(nn.Module):
 
     def forward(self, x):
         B = x.shape[0]
-        #mask = x[:, self.num_tokens :, 3:4] != 0
-        mask = x[:, self.num_tokens :, 2:3] != 0
+        mask = x[:, self.num_tokens :, 3:4] != 0
         for ib, blk in enumerate(self.in_blocks):
             x = blk(x, mask=mask)
 
@@ -287,8 +286,7 @@ class PET_generator(nn.Module):
 
     def forward(self, x, y):
         # Add tokens and label embedding
-        #mask = x[:, :, 3:4] != 0
-        mask = x[:, :, 2:3] != 0 #NOTE changed to accomodate shapenet which only have 3 features
+        mask = x[:, :, 3:4] != 0
         mask = torch.cat([torch.ones_like(mask[:, :1]), mask], 1)
         x = torch.cat([self.pid_embed(y).unsqueeze(1), x], 1) * mask
         #x = torch.cat([self.pid_embed(y), x], 1)* mask
@@ -452,8 +450,7 @@ class PET_body(nn.Module):
 
     def forward(self, x, cond=None, pid=None, add_info=None, time=None):
         B = x.shape[0]
-        #mask = x[:, :, 3:4] != 0
-        mask = x[:, :, 2:3] != 0 #NOTE changed to accomodate shapenet which only have 3 features
+        mask = x[:, :, 3:4] != 0
         token = self.token.expand(B, -1, -1)
 
         x_embed, x = self.embed(x, cond, mask)
@@ -491,10 +488,8 @@ class PET_body(nn.Module):
 
         # Create a new mask based on the updated point cloud with additional tokens
 
-        #mask = x[:, :, 3:4] != 0
-        #FIXME edited to make compatible with shapecorenet
-        mask = x[:, :, 2:3] != 0
-
+        mask = x[:, :, 3:4] != 0
+        
         attn_mask = mask.float() @ mask.float().transpose(-1, -2)
         attn_mask = ~(attn_mask.bool()).repeat_interleave(self.num_heads, dim=0)
         attn_mask = attn_mask.float() * -1e9

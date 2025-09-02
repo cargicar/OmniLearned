@@ -30,15 +30,6 @@ torch._dynamo.config.verbose = False
 import argparse
 import os # Import os for default path if needed
 
-
-cats = ['Airplane', 'Bag', 'Basket', 'Bathtub', 'Bed', 'Bench', 'Bottle', 'Bowl', 'Bus', 
-        'Cabinet', 'Can', 'Camera', 'Cap', 'Car', 'Chair', 'Clock', 'Dishwasher', 'Monitor', 
-        'Table', 'Telephone', 'Tin_can', 'Tower', 'Train', 'Keyboard', 'Earphone', 'Faucet', 
-        'File', 'Guitar', 'Helmet', 'Jar', 'Knife', 'Lamp', 'Laptop', 'Speaker', 'Mailbox', 
-        'Microphone', 'Microwave', 'Motorcycle', 'Mug', 'Piano', 'Pillow', 'Pistol', 'Pot', 
-        'Printer', 'Remote_control', 'Rifle', 'Rocket', 'Skateboard', 'Sofa', 'Stove',
-        'Vessel', 'Washer', 'Cellphone', 'Birdhouse', 'Bookshelf']
-
 def parse_arguments():
     """
     Parses command-line arguments for the model training script.
@@ -49,22 +40,20 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 
     # --- General/Output Arguments ---
-    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/",
-                         help="Output directory for logs, checkpoints, and results.")
-    # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/omnilearn_shapenet/all_cats/",
-    #                      help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
+                          help="Output directory for logs, checkpoints, and results.")
     #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                    help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="",
+    parser.add_argument("--save_tag", type=str, default="testing",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
     parser.add_argument("--dataset", type=str, default="top",
                         help="Name of the dataset to use (e.g., 'top').")
-    # parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets",
+    parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets",
+                         help="Base path to the dataset directory.")
+    # parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/",
     #                     help="Base path to the dataset directory.")
-    parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/shapenetCore",
-                        help="Base path to the dataset directory.")
 
     parser.add_argument("--wandb", action="store_true", # Use store_true for boolean flags
                         help="Enable Weights & Biases logging.")
@@ -76,10 +65,8 @@ def parse_arguments():
                         help="Resume training from the latest checkpoint in outdir/save_tag.")
 
     # --- Data/Feature Arguments ---
-    parser.add_argument('--categories', type=list, default=cats)
-    parser.add_argument('--scale_mode', type=str, default='shape_unit')
 
-    parser.add_argument("--num_feat", type=int, default=3,
+    parser.add_argument("--num_feat", type=int, default=4,
                         help="Number of features per particle/vector (e.g., 4 for 4-vectors).")
     parser.add_argument("--conditional", action="store_true",
                         help="Enable conditional generation/training.")
@@ -100,7 +87,7 @@ def parse_arguments():
                         help="Enable gradient clipping.")
     parser.add_argument("--use_event_loss", action="store_true",
                         help="Enable event-level loss calculation.")
-    parser.add_argument("--num_classes", type=int, default=len(cats),
+    parser.add_argument("--num_classes", type=int, default=4,
                         help="Number of output classes for classification tasks.")
     parser.add_argument("--mode", type=str, default="generator",
                         choices=["classifier", "generator", "other_mode_if_any"], # Add valid choices
@@ -203,9 +190,10 @@ def train_step(
 
         # for batch_idx, batch in enumerate(dataloader):
         optimizer.zero_grad()  # Zero the gradients
-        #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
-        X = batch["pointcloud"].to(device, dtype=torch.float)
-        y = batch["cate"].to(device)
+        X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        # y in G4 dataset is hot_encoded, but here it takes int categories.
+        y = torch.argmax(y, dim=1)
+        
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -353,9 +341,9 @@ def test_step(
             batch = next(data_iter)
         
         # for batch_idx, batch in enumerate(dataloader):
-        #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
-        X = batch["pointcloud"].to(device, dtype=torch.float)
-        y = batch["cate"].to(device)
+        X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        # y in G4 dataset is hot_encoded, but here it takes int categories.
+        y = torch.argmax(y, dim=1)
         
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
@@ -715,65 +703,38 @@ def main(args):
         print("************")
 
     # load in train data
-    # train_loader = load_data(
-    #     args.dataset,
-    #     dataset_type="train",
-    #     use_pid=args.use_pid,
-    #     pid_idx=args.pid_idx,
-    #     use_add=args.use_add,
-    #     num_add=args.num_add,
-    #     path=args.path,
-    #     batch=args.batch,
-    #     num_workers=args.num_workers,
-    #     rank=rank,
-    #     size=size,
-    # )
-    # if rank == 0:
-    #     print("**** Setup ****")
-    #     print(f"Train dataset len: {len(train_loader)}")
-    #     print("************")
+    train_loader = load_data(
+        args.dataset,
+        dataset_type="train",
+        use_pid=args.use_pid,
+        pid_idx=args.pid_idx,
+        use_add=args.use_add,
+        num_add=args.num_add,
+        path=args.path,
+        batch=args.batch,
+        num_workers=args.num_workers,
+        rank=rank,
+        size=size,
+    )
+    if rank == 0:
+        print("**** Setup ****")
+        print(f"Train dataset len: {len(train_loader)}")
+        print("************")
 
-    # test_loader = load_data(
-    #     args.dataset,
-    #     dataset_type="test",
-    #     use_pid=args.use_pid,
-    #     pid_idx=args.pid_idx,
-    #     use_add=args.use_add,
-    #     num_add=args.num_add,
-    #     path=args.path,
-    #     batch=args.batch,
-    #     num_workers=args.num_workers,
-    #     rank=rank,
-    #     size=size,
-    # )
-    #FIXME hardcoded path for dev and deb
-    #dataset_path = f"/home/carlos/Rnet_local/datasets/shapenetCore/"
-    dataset_path = f"/pscratch/sd/c/ccardona/datasets/shapenetCore/"
-    train_dset = ShapeNetCore(
-        path=dataset_path,
-        cates=args.categories,
-        split='train',
-        scale_mode=args.scale_mode,
+    test_loader = load_data(
+        args.dataset,
+        dataset_type="test",
+        use_pid=args.use_pid,
+        pid_idx=args.pid_idx,
+        use_add=args.use_add,
+        num_add=args.num_add,
+        path=args.path,
+        batch=args.batch,
+        num_workers=args.num_workers,
+        rank=rank,
+        size=size,
     )
-    val_dset = ShapeNetCore(
-        path=dataset_path,
-        cates=args.categories,
-        split='val',
-        scale_mode=args.scale_mode,
-    )
-
-    train_loader = DataLoader(
-        train_dset,
-        batch_size=args.batch,
-        shuffle=True,
-        #collate_fn=collate_fn_pad_point_clouds
-    )
-    val_loader = DataLoader(
-        val_dset,
-        batch_size=args.batch,
-        shuffle=False,
-        #collate_fn=collate_fn_pad_point_clouds
-    )
+    
     if rank == 0:
         print("**** Setup ****")
         print(f"Train dataset len: {len(train_loader)}")
@@ -886,7 +847,7 @@ def main(args):
     train_model(
         model,
         train_loader,
-        val_loader,
+        test_loader,
         optimizer,
         lr_scheduler,
         num_epochs=args.epoch,

@@ -125,6 +125,7 @@ class HEPDataset(Dataset):
         #TODO self.valid_indices added to filter out samples with all points equal zero. Have not been teste for generality with other datasets ther than G4
         #NOTE this loop is taking ages!
         # Pre-process to create a list of valid indices
+        
         # self.valid_indices = []
         # for file_idx in range(len(file_paths)):
         #     f = self._get_file(file_idx)
@@ -135,10 +136,10 @@ class HEPDataset(Dataset):
         #         if not (sample_data == 0).all():
         #             self.valid_indices.append((file_idx, sample_idx))
 
-        # # Update the length of the dataset to be the number of valid samples
+        # # # Update the length of the dataset to be the number of valid samples
         # self.file_indices = self.valid_indices
 
-        # random.shuffle(self.file_indices)  # Shuffle data entries globally
+        #random.shuffle(self.file_indices)  # Shuffle data entries globally
 
     def __len__(self):
         return len(self.file_indices)
