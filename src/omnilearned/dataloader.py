@@ -10,7 +10,7 @@ import numpy as np
 from pathlib import Path
 
 
-def collate_point_cloud(batch, max_part=150):
+def collate_point_cloud(batch, max_part=1000):
     """
     Collate function for point clouds and labels with truncation performed per batch.
 

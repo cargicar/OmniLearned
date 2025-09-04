@@ -361,9 +361,8 @@ class PET_body(nn.Module):
             norm_layer=norm_layer,
             K=K,
             num_heads=num_heads,
-            physics=True,
-            #TODO physics True increases the number of features?
-            #physics=False,
+            #physics=True,
+            physics=False,
             num_transformers=num_transf_local,
         )
 
