@@ -1,17 +1,17 @@
 import json
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
 from network import PET2
-from dataloader import load_data
+#from dataloader import load_data
 import argparse
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
-from dataset import ShapeNetCore
+from G4_dataset import HDF5Dataset, pad_collate_fn, PklDataset
 
 from utils import (
     is_master_node,
@@ -40,6 +40,13 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 
     # --- General/Output Arguments ---
+    
+    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_temp',
+                         help="Base path to the dataset directory.")
+    
+    #parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets/G4_h5/all_sims_combined.h5",
+    #                     help="Base path to the dataset directory.")
+    
     parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
                           help="Output directory for logs, checkpoints, and results.")
     #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
@@ -50,11 +57,6 @@ def parse_arguments():
                         help="Tag to use when loading pre-trained models.")
     parser.add_argument("--dataset", type=str, default="top",
                         help="Name of the dataset to use (e.g., 'top').")
-    parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets",
-                         help="Base path to the dataset directory.")
-    # parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/",
-    #                     help="Base path to the dataset directory.")
-
     parser.add_argument("--wandb", action="store_true", # Use store_true for boolean flags
                         help="Enable Weights & Biases logging.")
    
@@ -101,7 +103,7 @@ def parse_arguments():
                         help="Batch size for training.")
     parser.add_argument("--iterations", type=int, default=-1,
                         help="Number of training iterations. If -1, run for specified epochs.")
-    parser.add_argument("--epoch", type=int, default=15,
+    parser.add_argument("--epoch", type=int, default=1000,
                         help="Number of training epochs.")
     parser.add_argument("--warmup_epoch", type=int, default=1,
                         help="Number of warmup epochs for learning rate scheduling.")
@@ -178,7 +180,6 @@ def train_step(
 
     if iterations_per_epoch < 0:
         iterations_per_epoch = len(dataloader)
-
     data_iter = iter(dataloader)
 
     for batch_idx in range(iterations_per_epoch):
@@ -190,10 +191,12 @@ def train_step(
 
         # for batch_idx, batch in enumerate(dataloader):
         optimizer.zero_grad()  # Zero the gradients
-        X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
         # y in G4 dataset is hot_encoded, but here it takes int categories.
-        y = torch.argmax(y, dim=1)
-        
+        #y = torch.argmax(y, dim=1)
+        X, energy, y, gap_pid = batch
+        X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
+        y = (y == 2).long()
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -341,10 +344,12 @@ def test_step(
             batch = next(data_iter)
         
         # for batch_idx, batch in enumerate(dataloader):
-        X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
-        # y in G4 dataset is hot_encoded, but here it takes int categories.
-        y = torch.argmax(y, dim=1)
-        
+        # X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
+        # # y in G4 dataset is hot_encoded, but here it takes int categories.
+        # y = torch.argmax(y, dim=1)
+        X, energy, y, gap_pid = batch
+        X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
+        y = (y == 2).long()
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -703,37 +708,71 @@ def main(args):
         print("************")
 
     # load in train data
-    train_loader = load_data(
-        args.dataset,
-        dataset_type="train",
-        use_pid=args.use_pid,
-        pid_idx=args.pid_idx,
-        use_add=args.use_add,
-        num_add=args.num_add,
-        path=args.path,
-        batch=args.batch,
-        num_workers=args.num_workers,
-        rank=rank,
-        size=size,
-    )
-    if rank == 0:
-        print("**** Setup ****")
-        print(f"Train dataset len: {len(train_loader)}")
-        print("************")
+    # train_loader = load_data(
+    #     args.dataset,
+    #     dataset_type="train",
+    #     use_pid=args.use_pid,
+    #     pid_idx=args.pid_idx,
+    #     use_add=args.use_add,
+    #     num_add=args.num_add,
+    #     path=args.path,
+    #     batch=args.batch,
+    #     num_workers=args.num_workers,
+    #     rank=rank,
+    #     size=size,
+    # )
+    # if rank == 0:
+    #     print("**** Setup ****")
+    #     print(f"Train dataset len: {len(train_loader)}")
+    #     print("************")
 
-    test_loader = load_data(
-        args.dataset,
-        dataset_type="test",
-        use_pid=args.use_pid,
-        pid_idx=args.pid_idx,
-        use_add=args.use_add,
-        num_add=args.num_add,
-        path=args.path,
-        batch=args.batch,
-        num_workers=args.num_workers,
-        rank=rank,
-        size=size,
+    # test_loader = load_data(
+    #     args.dataset,
+    #     dataset_type="test",
+    #     use_pid=args.use_pid,
+    #     pid_idx=args.pid_idx,
+    #     use_add=args.use_add,
+    #     num_add=args.num_add,
+    #     path=args.path,
+    #     batch=args.batch,
+    #     num_workers=args.num_workers,
+    #     rank=rank,
+    #     size=size,
+    # )
+    #h5_file_path = args.path
+    #dataset = HDF5Dataset(h5_file_path)
+    pkl_files_path = args.path
+    dataset = PklDataset(pkl_files_path)
+    
+    print(f"Successfully loaded dataset with {len(dataset)} total events.")
+        
+    # Define the split ratios
+    train_ratio = 0.8
+    val_ratio = 0.1
+    test_ratio = 0.1
+
+    # Calculate the number of samples for each split
+    num_events = len(dataset)
+    num_train = int(num_events * train_ratio)
+    num_val = int(num_events * val_ratio)
+    num_test = num_events - num_train - num_val
+
+    # Use random_split to create the subsets
+    train_dataset, val_dataset, test_dataset = random_split(
+        dataset, [num_train, num_val, num_test]
     )
+
+    print(f"\nDataset split into:")
+    print(f"  Training set: {len(train_dataset)} events")
+    print(f"  Validation set: {len(val_dataset)} events")
+    print(f"  Test set: {len(test_dataset)} events")
+
+    # Create DataLoaders for each subset
+    batch_size = args.batch
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate_fn, num_workers=args.num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn, num_workers=args.num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn, num_workers=args.num_workers)
+
     
     if rank == 0:
         print("**** Setup ****")
@@ -847,7 +886,7 @@ def main(args):
     train_model(
         model,
         train_loader,
-        test_loader,
+        val_loader,
         optimizer,
         lr_scheduler,
         num_epochs=args.epoch,

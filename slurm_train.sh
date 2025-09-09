@@ -4,6 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --time=04:00:00
 #SBATCH --constraint=gpu
+#SBATCH --gpus=4
 #SBATCH --qos=regular
 #SBATCH --account=m3246
 ##SBATCH --volume="/pscratch/sd/c/ccardona:/pscratch/sd/c/ccardona"
@@ -12,4 +13,7 @@
 ##srun  shifter python scripts/train_jetnet.py --local --layer_scale --dataset jetnet30 --fine_tune 
 module load conda
 conda activate omnilearned
-srun python src/omnilearned/train.py --save_tag test --dataset G4 --path /pscratch/sd/c/ccardona/datasets --num_classes 7
+module load pytorch
+#srun python src/omnilearned/train.py --save_tag test --dataset G4 --path /pscratch/sd/c/ccardona/datasets --num_classes 7
+#srun python src/omnilearned/train.py --save_tag test --num_classes 7
+srun python src/omnilearned/train.py --save_tag small_ds --num_classes 2
