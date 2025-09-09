@@ -54,7 +54,7 @@ def parse_arguments():
                           help="Output directory for logs, checkpoints, and results.")
     #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                    help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="detector_cats_val102",
+    parser.add_argument("--save_tag", type=str, default="energy_emb",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
@@ -152,7 +152,7 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
-def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, title="pointcloud"):
+def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud"):
     """
     Plots each individual point cloud from a batch in a separate 3D scatter plot.
 
@@ -174,6 +174,7 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, title="point
         point_cloud = batch_of_point_clouds[i].detach().cpu().numpy()
         category = int(cates[i].detach().cpu().numpy())
         gap = int(gaps[i].detach().cpu().numpy())
+        energy = energies[i].detach().cpu().numpy()
         # Separate the coordinates for plotting
         x = point_cloud[:, 0]
         y = point_cloud[:, 1]
@@ -190,10 +191,10 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, title="point
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
-        ax.set_title(f'Point Cloud {i+1}, {title} particle {category}, gap {gap}')
+        ax.set_title(f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy}')
         
         # Display the plot
-        plt.savefig(f"results/gen_{i}_{title}_pcat_{category}_gcat_{gap}.png")
+        plt.savefig(f"results/gen_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
         plt.close()
 
 def gather_tensors(x):
@@ -294,16 +295,16 @@ def gen(
     X, energy, y, gap_pid = batch
     X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
-    plot_batch_3d(X, y, gap_pid, title = "from dataset")
+    plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
     model_kwargs = {
         key: (batch[key].to(device) if batch[key] is not None else None)
         for key in ["cond", "pid", "add_info"]
         if key in batch
     }
     with torch.no_grad():
-        pts = sampler(model, X, y, gap_pid, 2000, 500, model_kwargs)
+        pts = sampler(model, X, y, gap_pid, energy, 1000, 500, model_kwargs)
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
-        plot_batch_3d(pts, y, gap_pid, title = "from model sampler")
+        plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
     
     # return (
     #     torch.cat(pts).to(device),

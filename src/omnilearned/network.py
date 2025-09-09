@@ -119,7 +119,7 @@ class PET2(nn.Module):
         # Specify parameters that should not be decayed
         return {"norm", "scale", "token"}
 
-    def forward(self, x, y, gap, cond=None, pid=None, add_info=None):
+    def forward(self, x, y, gap, energy, cond=None, pid=None, add_info=None):
         y_pred, y_perturb, z_pred, v, x_body, z_body = (
             None,
             None,
@@ -133,7 +133,7 @@ class PET2(nn.Module):
         if self.mode == "generator" or self.mode == "pretrain":
             z, v = perturb(x, time)
             z_body = self.body(z, cond, pid, add_info, time)
-            z_pred = self.generator(z_body, y, gap)
+            z_pred = self.generator(z_body, y, gap, energy)
 
         if self.mode == "classifier" or self.mode == "pretrain":
             # x_body = [B, global_emb+local_emb, mlp_out_channels]
@@ -259,6 +259,18 @@ class PET_generator(nn.Module):
             ),
         )
 
+        # New MLP for the continuous Energy variable
+        self.energy_embed = nn.Sequential(
+            nn.Linear(1, hidden_size),  # Input is a single float, output is hidden_size
+            act_layer(),
+            MLP(
+                hidden_size,
+                int(mlp_ratio * hidden_size),
+                act_layer=act_layer,
+                drop=mlp_drop,
+            ),
+        )
+
         self.in_blocks = nn.ModuleList(
             [
                 AttBlock(
@@ -313,28 +325,54 @@ class PET_generator(nn.Module):
     #     )
     #     return self.out(x) * mask[:, self.num_add + self.num_tokens + 1 :]
     
-    def forward(self, x, y, gap):  # z is the new input for gap_pid
-        # Add tokens and label embedding
-        mask = x[:, :, 3:4] != 0
-        mask = torch.cat([torch.ones_like(mask[:, :2]), mask], 1) # Note: mask size changed from 1 to 2
+    # def forward(self, x, y, gap):  # z is the new input for gap_pid
+    #     # Add tokens and label embedding
+    #     mask = x[:, :, 3:4] != 0
+    #     mask = torch.cat([torch.ones_like(mask[:, :2]), mask], 1) # Note: mask size changed from 1 to 2
         
-        # Embed pid and gap_pid
-        pid_embedding = self.pid_embed(y).unsqueeze(1)
-        gap_pid_embedding = self.gap_pid_embed(gap).unsqueeze(1)
+    #     # Embed pid and gap_pid
+    #     pid_embedding = self.pid_embed(y).unsqueeze(1)
+    #     gap_pid_embedding = self.gap_pid_embed(gap).unsqueeze(1)
         
-        # Concatenate both embeddings with the input x
-        x = torch.cat([pid_embedding, gap_pid_embedding, x], 1) * mask
+    #     # Concatenate both embeddings with the input x
+    #     x = torch.cat([pid_embedding, gap_pid_embedding, x], 1) * mask
         
-        for ib, blk in enumerate(self.in_blocks):
-            x = blk(x, mask=mask)
+    #     for ib, blk in enumerate(self.in_blocks):
+    #         x = blk(x, mask=mask)
 
-        x = (
-            self.fc(x[:, self.num_add + self.num_tokens + 2 :]) # Slicing adjusted for 2 embeddings
-            * mask[:, self.num_add + self.num_tokens + 2 :]
-        )
-        return self.out(x) * mask[:, self.num_add + self.num_tokens + 2 :]
+    #     x = (
+    #         self.fc(x[:, self.num_add + self.num_tokens + 2 :]) # Slicing adjusted for 2 embeddings
+    #         * mask[:, self.num_add + self.num_tokens + 2 :]
+    #     )
+    #     return self.out(x) * mask[:, self.num_add + self.num_tokens + 2 :]
 
+    def forward(self, x, y, z, e):  # e is the new input for Energy
+            # Ensure the Energy tensor has a feature dimension
+            e = e.unsqueeze(-1) if e.dim() == 1 else e
 
+            # Add tokens and label embedding
+            # The number of added tokens is now 3 (pid, gap_pid, energy)
+            mask = x[:, :, 3:4] != 0
+            mask = torch.cat([torch.ones_like(mask[:, :3]), mask], 1)
+            
+            # Embed all conditioning variables
+            pid_embedding = self.pid_embed(y).unsqueeze(1)
+            gap_pid_embedding = self.gap_pid_embed(z).unsqueeze(1)
+            energy_embedding = self.energy_embed(e).unsqueeze(1)
+            
+            # Concatenate all three embeddings with the input x
+            x = torch.cat([pid_embedding, gap_pid_embedding, energy_embedding, x], 1) * mask
+            
+            for ib, blk in enumerate(self.in_blocks):
+                x = blk(x, mask=mask)
+
+            # Adjust the slicing to account for the three added tokens
+            x = (
+                self.fc(x[:, self.num_add + self.num_tokens + 3 :]) 
+                * mask[:, self.num_add + self.num_tokens + 3 :]
+            )
+            return self.out(x) * mask[:, self.num_add + self.num_tokens + 3 :]
+    
 class PET_body(nn.Module):
     def __init__(
         self,

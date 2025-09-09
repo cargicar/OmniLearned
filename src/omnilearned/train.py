@@ -204,7 +204,7 @@ def train_step(
             "cuda:{}".format(device) if torch.cuda.is_available() else "cpu",
             enabled=use_amp,
         ):
-            outputs = model(X, y, gap_pid, **model_kwargs)
+            outputs = model(X, y, gap_pid, energy, **model_kwargs)
             loss = 0
             
             if outputs["y_pred"] is not None:
@@ -355,7 +355,7 @@ def test_step(
         }
         try:
             with torch.no_grad():
-                outputs = model(X, y, gap_pid, **model_kwargs)
+                outputs = model(X, y, gap_pid, energy, **model_kwargs)
         except Exception as e:
             print(f"batch_idx [{batch_idx}] skiped: Exception during model inference: {e}")
             continue
