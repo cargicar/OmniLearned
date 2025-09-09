@@ -40,6 +40,7 @@ class PET2(nn.Module):
         use_time=False,
         mode="classifier",
         num_classes=2,
+        num_gap_classes=4, 
     ):
         super().__init__()
         self.mode = mode
@@ -101,6 +102,7 @@ class PET2(nn.Module):
                 num_tokens=num_tokens,
                 num_add=self.num_add,
                 num_classes=num_classes,
+                num_gap_classes=num_gap_classes,
             )
         self.initialize_weights()
 
@@ -117,7 +119,7 @@ class PET2(nn.Module):
         # Specify parameters that should not be decayed
         return {"norm", "scale", "token"}
 
-    def forward(self, x, y, cond=None, pid=None, add_info=None):
+    def forward(self, x, y, gap, cond=None, pid=None, add_info=None):
         y_pred, y_perturb, z_pred, v, x_body, z_body = (
             None,
             None,
@@ -131,7 +133,7 @@ class PET2(nn.Module):
         if self.mode == "generator" or self.mode == "pretrain":
             z, v = perturb(x, time)
             z_body = self.body(z, cond, pid, add_info, time)
-            z_pred = self.generator(z_body, y)
+            z_pred = self.generator(z_body, y, gap)
 
         if self.mode == "classifier" or self.mode == "pretrain":
             # x_body = [B, global_emb+local_emb, mlp_out_channels]
@@ -229,6 +231,7 @@ class PET_generator(nn.Module):
         num_tokens=4,
         num_add=1,
         num_classes=2,
+        num_gap_classes=4,
     ):
         super().__init__()
         self.num_tokens = num_tokens
@@ -237,6 +240,17 @@ class PET_generator(nn.Module):
 
         self.pid_embed = nn.Sequential(
             nn.Embedding(num_classes, hidden_size),
+            MLP(
+                hidden_size,
+                int(mlp_ratio * hidden_size),
+                act_layer=act_layer,
+                drop=mlp_drop,
+            ),
+        )
+
+        # New embedding for gap_pid
+        self.gap_pid_embed = nn.Sequential(
+            nn.Embedding(num_gap_classes, hidden_size), # Embedding layer for gap_pid
             MLP(
                 hidden_size,
                 int(mlp_ratio * hidden_size),
@@ -284,20 +298,41 @@ class PET_generator(nn.Module):
 
         self.apply(_init_weights)
 
-    def forward(self, x, y):
+    # def forward(self, x, y):
+    #     # Add tokens and label embedding
+    #     mask = x[:, :, 3:4] != 0
+    #     mask = torch.cat([torch.ones_like(mask[:, :1]), mask], 1)
+    #     x = torch.cat([self.pid_embed(y).unsqueeze(1), x], 1) * mask
+    #     #x = torch.cat([self.pid_embed(y), x], 1)* mask
+    #     for ib, blk in enumerate(self.in_blocks):
+    #         x = blk(x, mask=mask)
+
+    #     x = (
+    #         self.fc(x[:, self.num_add + self.num_tokens + 1 :])
+    #         * mask[:, self.num_add + self.num_tokens + 1 :]
+    #     )
+    #     return self.out(x) * mask[:, self.num_add + self.num_tokens + 1 :]
+    
+    def forward(self, x, y, gap):  # z is the new input for gap_pid
         # Add tokens and label embedding
         mask = x[:, :, 3:4] != 0
-        mask = torch.cat([torch.ones_like(mask[:, :1]), mask], 1)
-        x = torch.cat([self.pid_embed(y).unsqueeze(1), x], 1) * mask
-        #x = torch.cat([self.pid_embed(y), x], 1)* mask
+        mask = torch.cat([torch.ones_like(mask[:, :2]), mask], 1) # Note: mask size changed from 1 to 2
+        
+        # Embed pid and gap_pid
+        pid_embedding = self.pid_embed(y).unsqueeze(1)
+        gap_pid_embedding = self.gap_pid_embed(gap).unsqueeze(1)
+        
+        # Concatenate both embeddings with the input x
+        x = torch.cat([pid_embedding, gap_pid_embedding, x], 1) * mask
+        
         for ib, blk in enumerate(self.in_blocks):
             x = blk(x, mask=mask)
 
         x = (
-            self.fc(x[:, self.num_add + self.num_tokens + 1 :])
-            * mask[:, self.num_add + self.num_tokens + 1 :]
+            self.fc(x[:, self.num_add + self.num_tokens + 2 :]) # Slicing adjusted for 2 embeddings
+            * mask[:, self.num_add + self.num_tokens + 2 :]
         )
-        return self.out(x) * mask[:, self.num_add + self.num_tokens + 1 :]
+        return self.out(x) * mask[:, self.num_add + self.num_tokens + 2 :]
 
 
 class PET_body(nn.Module):

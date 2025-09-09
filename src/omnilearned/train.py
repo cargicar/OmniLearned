@@ -27,9 +27,6 @@ import torch.amp as amp
 torch.set_float32_matmul_precision("high")
 torch._dynamo.config.verbose = False
 
-import argparse
-import os # Import os for default path if needed
-
 def parse_arguments():
     """
     Parses command-line arguments for the model training script.
@@ -46,12 +43,11 @@ def parse_arguments():
     
     #parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets/G4_h5/all_sims_combined.h5",
     #                     help="Base path to the dataset directory.")
-    
     parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
                           help="Output directory for logs, checkpoints, and results.")
     #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                    help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="testing",
+    parser.add_argument("--save_tag", type=str, default="detector_cats",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
@@ -91,6 +87,8 @@ def parse_arguments():
                         help="Enable event-level loss calculation.")
     parser.add_argument("--num_classes", type=int, default=4,
                         help="Number of output classes for classification tasks.")
+    parser.add_argument("--num_gap_classes", type=int, default=4,
+                        help="Number of classes for detector classification tasks.")
     parser.add_argument("--mode", type=str, default="generator",
                         choices=["classifier", "generator", "other_mode_if_any"], # Add valid choices
                         help="Operating mode of the model (e.g., 'classifier', 'generator').")
@@ -206,7 +204,7 @@ def train_step(
             "cuda:{}".format(device) if torch.cuda.is_available() else "cpu",
             enabled=use_amp,
         ):
-            outputs = model(X, y, **model_kwargs)
+            outputs = model(X, y, gap_pid, **model_kwargs)
             loss = 0
             
             if outputs["y_pred"] is not None:
@@ -357,7 +355,7 @@ def test_step(
         }
         try:
             with torch.no_grad():
-                outputs = model(X, y, **model_kwargs)
+                outputs = model(X, y, gap_pid, **model_kwargs)
         except Exception as e:
             print(f"batch_idx [{batch_idx}] skiped: Exception during model inference: {e}")
             continue
@@ -696,6 +694,7 @@ def main(args):
         use_time=False if args.mode == "classifier" else True,
         mode=args.mode,
         num_classes=args.num_classes,
+        num_gap_classes=args.num_gap_classes,
     )
     if rank == 0:
         d = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

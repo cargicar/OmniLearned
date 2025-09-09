@@ -47,7 +47,7 @@ def perturb(x, time):
 #################### Added for Shapenet branch #########################
 #TODO this should be move to network #################3
 # --- Sampler Function ---
-def sampler(model, X, y, num_steps, num_points, model_kwargs, device = "cuda", cond=None, pid=None, add_info=None):
+def sampler(model, X, y, gap, num_steps, num_points, model_kwargs, device = "cuda", cond=None, pid=None, add_info=None):
     """
     Samples a clean point cloud from random Gaussian noise.
 
@@ -87,7 +87,7 @@ def sampler(model, X, y, num_steps, num_points, model_kwargs, device = "cuda", c
             # The model's body takes the noisy data and conditions
             z_body = model.module.body(x, cond, pid, add_info, t)
             # The generator predicts the velocity
-            z_pred_v = model.module.generator(z_body, y)
+            z_pred_v = model.module.generator(z_body, y, gap)
             #output_dic = model(x,y, **model_kwargs) # Doing from the whole model is weird. Does not take time?  
             #z_pred_v = output_dic["z_pred"]
             # --- Denoising Step ---
