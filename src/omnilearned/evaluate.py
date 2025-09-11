@@ -54,7 +54,7 @@ def parse_arguments():
                           help="Output directory for logs, checkpoints, and results.")
     #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                    help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="energy_emb",
+    parser.add_argument("--save_tag", type=str, default="detector_cats",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")

@@ -54,11 +54,10 @@ def sampler(model, X, y, gap, energy, num_steps, num_points, model_kwargs, devic
     Args:
         model: The trained diffusion model.
         num_steps: The number of denoising steps.
-        Z: A random Gaussian noise tensor of shape [batch_size, num_points, 3].
-        y: A tensor of shape [batch_size, num_classes] for one-hot encoding.
-        cond: An optional tensor for conditional information.
-        pid: An optional tensor for point cloud ID.
-        add_info: Optional additional information tensor.
+        X: A random Gaussian noise tensor of shape [batch_size, num_points, 4].
+        y: A tensor of shape [batch_size, particle class] .
+        gap: A tensor of shape [batch_size, gap class] .
+        energy: A tensor of shape [batch_size, energy primary (normalized)].
 
     Returns:
         The denoised point cloud tensor.

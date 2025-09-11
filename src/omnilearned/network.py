@@ -151,7 +151,7 @@ class PET2(nn.Module):
             "z_body": z_body,
             "alpha": alpha**2,
         }
-
+#TODO add y, gap, energy to the classifier forward function
 class PET_classifier(nn.Module):
     def __init__(
         self,

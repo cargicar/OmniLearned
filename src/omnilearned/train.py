@@ -768,9 +768,9 @@ def main(args):
 
     # Create DataLoaders for each subset
     batch_size = args.batch
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate_fn, num_workers=args.num_workers)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn, num_workers=args.num_workers)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn, num_workers=args.num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
 
     
     if rank == 0:

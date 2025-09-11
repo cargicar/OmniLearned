@@ -128,17 +128,17 @@ class HDF5Dataset(Dataset):
         return (shower, energy, pid, gap_pid)
 
 
-# A dictionary to store the mapping from file index to global index range
-# This is a helper for the dataset, but not part of the class itself.
+# A helper dictionary to store the mapping from file index to global index range
 file_index_to_global_range = {}
 
 class PklDataset(Dataset):
     """
-    A custom PyTorch Dataset for loading and serving data from a folder of pickle files.
-    Each pickle file is expected to contain a dictionary with 'showers' and 'energies'.
+    A PyTorch Dataset for loading and serving data from a folder of pickle files.
+    Each pickle file is expected to contain a dictionary with 'showers', 'particle_pid', 'gap_pid', 
+    primary_energies'.
     """
 
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, transform=None):
         """
         Initializes the dataset by loading all pickle files into memory.
 
@@ -151,6 +151,7 @@ class PklDataset(Dataset):
         self.all_pids = []
         self.all_gap_pids = []
         self._load_data()
+        self.transform = transform
 
     def _load_data(self):
         """
@@ -207,9 +208,15 @@ class PklDataset(Dataset):
 
         # Retrieve the data from the pre-loaded arrays
         shower = self.all_showers[idx]
-        energy = self.all_energies[idx]
+        #Normalize energy between 0 and 1
+        max_e = np.max(self.all_energies)
+        min_e = np.min(self.all_energies)
+        energy = (self.all_energies[idx] - min_e) / (max_e-min_e)
+        #energy = self.all_energies[idx]
         pid = self.all_pids[idx]
         gap_pid = self.all_gap_pids[idx]
+        if self.transform:
+            shower = self.transform(shower)
 
         # Convert numpy arrays to PyTorch tensors
         # The showers data has shape (N_particles, 4)
