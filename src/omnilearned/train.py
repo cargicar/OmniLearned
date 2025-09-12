@@ -11,7 +11,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
-from G4_dataset import HDF5Dataset, pad_collate_fn, PklDataset
+from dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
 
 from utils import (
     is_master_node,
@@ -51,8 +51,8 @@ def parse_arguments():
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
-    parser.add_argument("--dataset", type=str, default="top",
-                        help="Name of the dataset to use (e.g., 'top').")
+    parser.add_argument("--dataset", type=str, default="G4",
+                        help="Name of the dataset to use (e.g., 'G4').")
     parser.add_argument("--wandb", action="store_true", # Use store_true for boolean flags
                         help="Enable Weights & Biases logging.")
    
@@ -738,11 +738,17 @@ def main(args):
     #     rank=rank,
     #     size=size,
     # )
-    #h5_file_path = args.path
-    #dataset = HDF5Dataset(h5_file_path)
-    pkl_files_path = args.path
-    dataset = PklDataset(pkl_files_path)
-    
+    #TODO unify for all datasets,. Better make a class that load the dataset and split it
+    if args.dataset == "G4":#pkl
+        pkl_files_path = args.path
+        dataset = PklDataset(pkl_files_path)
+    elif args.dataset == "G4_h5":#h5
+        h5_file_path = args.path
+        dataset = HDF5Dataset(h5_file_path)
+    elif args.dataset == "ShapeNetCore":#shapenetcore
+        shapenet_path = args.path
+        dataset = ShapeNetCore(shapenet_path)
+
     print(f"Successfully loaded dataset with {len(dataset)} total events.")
         
     # Define the split ratios
