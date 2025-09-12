@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
-from network import PET2
+from models.omnilearned import PET2
 #from dataloader import load_data
 import argparse
 import torch.distributed as dist
@@ -11,7 +11,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
-from dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
+from data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
 
 from utils import (
     is_master_node,
