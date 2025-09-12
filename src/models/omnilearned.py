@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from layers import (
+from src.models.layers import (
     NoScaleDropout,
     InteractionBlock,
     LocalEmbeddingBlock,
@@ -11,7 +11,7 @@ from layers import (
     InputBlock,
     TokenAttBlock,
 )
-from diffusion import MPFourier, perturb, get_logsnr_alpha_sigma
+from src.diffusion.diffusion_utils import MPFourier, perturb, get_logsnr_alpha_sigma
 
 
 class PET2(nn.Module):

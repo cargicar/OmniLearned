@@ -1,9 +1,13 @@
+import rootutils
 import json
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
-from models.omnilearned import PET2
+
+rootutils.setup_root(__file__, pythonpath=True)
+
+
 #from dataloader import load_data
 import argparse
 import torch.distributed as dist
@@ -11,9 +15,11 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
-from data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
 
-from utils import (
+from src.models.omnilearned import PET2
+from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
+
+from scripts.utils import (
     is_master_node,
     ddp_setup,
     get_param_groups,
@@ -38,9 +44,9 @@ def parse_arguments():
 
     # --- General/Output Arguments ---
     
-    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_temp',
+    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
                          help="Base path to the dataset directory.")
-    
+
     #parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets/G4_h5/all_sims_combined.h5",
     #                     help="Base path to the dataset directory.")
     parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
