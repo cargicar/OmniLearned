@@ -17,6 +17,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from diffusers.optimization import get_cosine_schedule_with_warmup
 
 from src.models.omnilearned import PET2
+from src.models.calolearned import PET3
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
 
 from scripts.utils import (
@@ -57,8 +58,8 @@ def parse_arguments():
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
-    parser.add_argument("--dataset", type=str, default="G4",
-                        help="Name of the dataset to use (e.g., 'G4').")
+    parser.add_argument("--dataset", type=str, default="G4_pkl",
+                        help="Name of the dataset to use (e.g., 'G4_pkl').")
     parser.add_argument("--wandb", action="store_true", # Use store_true for boolean flags
                         help="Enable Weights & Biases logging.")
    
@@ -200,6 +201,7 @@ def train_step(
         #y = torch.argmax(y, dim=1)
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
+        #FIXME for two classes only. Testing.
         y = (y == 2).long()
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
@@ -237,11 +239,12 @@ def train_step(
                     loss = loss + loss_class
                     logs["loss_class"] += loss_class.detach()
             if outputs["z_pred"] is not None:
-                nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
-                loss_gen = (
-                    gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
-                )
-                loss_gen = loss_gen.mean()
+                # nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
+                # loss_gen = (
+                #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
+                # )
+                # loss_gen = loss_gen.mean()
+                loss_gen = outputs["loss"]
                 loss = loss + loss_gen
                 logs["loss_gen"] += loss_gen.detach()
             if outputs["y_perturb"] is not None:
@@ -679,7 +682,8 @@ def restore_checkpoint(
 def main(args):
     local_rank, rank, size = ddp_setup()
     # set up model
-    model = PET2(
+    #model = PET2(
+    model = PET3(
         input_dim=args.num_feat,
         hidden_size=args.base_dim,
         num_transformers=args.num_transf,
@@ -745,7 +749,7 @@ def main(args):
     #     size=size,
     # )
     #TODO unify for all datasets,. Better make a class that load the dataset and split it
-    if args.dataset == "G4":#pkl
+    if args.dataset == "G4_pkl":#pkl
         pkl_files_path = args.path
         dataset = PklDataset(pkl_files_path)
     elif args.dataset == "G4_h5":#h5

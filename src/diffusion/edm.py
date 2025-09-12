@@ -32,8 +32,9 @@ class EDM(DiffusionModelBase):
     ):
         super().__init__()
         self.model = model
-        assert model.in_channels == model.out_channels, "input and output channels must match"
-        self.input_size = (model.in_channels, *model.input_size)
+        #assert model.in_channels == model.out_channels, "input and output channels must match"
+        #TODO figure out how to pass this info from the model
+        #self.input_size = (model.in_channels, *model.input_size)
 
         self.num_timesteps = num_timesteps
 
@@ -102,6 +103,7 @@ class EDM(DiffusionModelBase):
     @torch.inference_mode()
     def sample(
         self,
+        x_0, #NOTE
         conditions,
         steps=None,
         solver="heun",
@@ -111,7 +113,8 @@ class EDM(DiffusionModelBase):
     ):
         num_samples = len(conditions[0])
         assert all(num_samples == len(c) for c in conditions), "all conditions must have the same batch size"
-        x_shape = (num_samples, *self.input_size)
+        #x_shape = (num_samples, *self.input_size)
+        x_shape = x_0.shape #NOTE
 
         ts = self.get_timesteps(steps)
         sigmas = self.get_sigmas(ts)
