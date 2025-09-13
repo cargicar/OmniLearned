@@ -238,14 +238,17 @@ def train_step(
                     #loss_class = class_cost(outputs["y_pred"], y_int).mean()
                     loss = loss + loss_class
                     logs["loss_class"] += loss_class.detach()
-            if outputs["z_pred"] is not None:
+                    
+            #if outputs["z_pred"] is not None:
+            if outputs["loss_gen"] is not None:
                 # nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
                 # loss_gen = (
                 #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
                 # )
                 # loss_gen = loss_gen.mean()
-                loss_gen = outputs["loss"]
+                loss_gen = outputs["loss_gen"]
                 loss = loss + loss_gen
+                
                 logs["loss_gen"] += loss_gen.detach()
             if outputs["y_perturb"] is not None:
                 if use_event_loss:
@@ -392,11 +395,16 @@ def test_step(
                 #loss_class = class_cost(outputs["y_pred"], y_int_labels).mean()
                 loss = loss + loss_class
                 logs["loss_class"] += loss_class.detach()
-        if outputs["z_pred"] is not None:
-            nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
-            loss_gen = gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
-            loss_gen = loss_gen.mean()
+        #if outputs["z_pred"] is not None:
+        if outputs["loss_gen"] is not None:
+            # nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
+            # loss_gen = (
+            #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
+            # )
+            # loss_gen = loss_gen.mean()
+            loss_gen = outputs["loss_gen"]
             loss = loss + loss_gen
+            
             logs["loss_gen"] += loss_gen.detach()
         if outputs["y_perturb"] is not None:
             if use_event_loss:
