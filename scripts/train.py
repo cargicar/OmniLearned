@@ -16,8 +16,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
 
-from src.models.omnilearned import PET2
-from src.models.calolearned import PET3
+from src.models.omnilearnedv2 import PET3
+#from src.models.calolearned import PET3
+from src.diffusion.edm import EDM
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
 
 from scripts.utils import (
@@ -203,6 +204,7 @@ def train_step(
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
         #FIXME for two classes only. Testing.
         y = (y == 2).long()
+        x_conds = (y, gap_pid, energy)
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -212,77 +214,10 @@ def train_step(
             "cuda:{}".format(device) if torch.cuda.is_available() else "cpu",
             enabled=use_amp,
         ):
-            outputs = model(X, y, gap_pid, energy, **model_kwargs)
-            loss = 0
+            #outputs = model(X, y, gap_pid, energy, **model_kwargs)
+            loss_gen = model(X, x_conds, **model_kwargs)
+            logs["loss_gen"] += loss_gen.detach()
             
-            if outputs["y_pred"] is not None:
-                if use_event_loss:
-                    event_mask = y >= 200
-                    if event_mask.any():
-                        loss_event = class_cost(
-                            outputs["y_pred"][event_mask][:, 200:], y[event_mask] - 200
-                        ).mean()
-                        logs["loss_class_event"] += loss_event.detach()
-                        loss = loss + loss_event
-                    if (~event_mask).any():
-                        loss_class = class_cost(
-                            outputs["y_pred"][~event_mask][:, :200], y[~event_mask]
-                        ).mean()
-                        logs["loss_class"] += loss_class.detach()
-                        loss = loss + loss_class
-                else:
-                    
-                    loss_class = class_cost(outputs["y_pred"], y).mean()
-                    #FIXME for G4 use
-                    #y_int = torch.argmax(y, dim=1)
-                    #loss_class = class_cost(outputs["y_pred"], y_int).mean()
-                    loss = loss + loss_class
-                    logs["loss_class"] += loss_class.detach()
-                    
-            #if outputs["z_pred"] is not None:
-            if outputs["loss_gen"] is not None:
-                # nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
-                # loss_gen = (
-                #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
-                # )
-                # loss_gen = loss_gen.mean()
-                loss_gen = outputs["loss_gen"]
-                loss = loss + loss_gen
-                
-                logs["loss_gen"] += loss_gen.detach()
-            if outputs["y_perturb"] is not None:
-                if use_event_loss:
-                    event_mask = y >= 200
-                    if event_mask.any():
-                        loss_event = torch.mean(
-                            outputs["alpha"][event_mask].squeeze(1)
-                            * class_cost(
-                                outputs["y_perturb"][event_mask][:, 200:],
-                                y[event_mask] - 200,
-                            )
-                        )
-                        logs["loss_event_perturb"] += loss_event.detach()
-                        loss = loss + loss_event
-
-                    if (~event_mask).any():
-                        loss_class = torch.mean(
-                            outputs["alpha"][~event_mask].squeeze(1)
-                            * class_cost(
-                                outputs["y_perturb"][~event_mask][:, :200],
-                                y[~event_mask],
-                            )
-                        )
-                        logs["loss_perturb"] += loss_class.detach()
-                        loss = loss + loss_class
-
-                else:
-                    loss_perturb = torch.mean(
-                        outputs["alpha"].squeeze(1)
-                        * class_cost(outputs["y_perturb"], y)
-                    )
-                    loss = loss + loss_perturb
-                    logs["loss_perturb"] += loss_perturb.detach()
-
             if (
                 use_clip
                 and outputs["z_body"] is not None
@@ -296,7 +231,6 @@ def train_step(
                 loss = loss + loss_clip
                 logs["loss_clip"] += loss_clip.detach()
 
-        logs["loss"] += loss.detach()
         if use_amp and gscaler is not None:
             gscaler.scale(loss).backward()
             gscaler.unscale_(optimizer)
@@ -304,7 +238,7 @@ def train_step(
             gscaler.step(optimizer)
             gscaler.update()
         else:
-            loss.backward()  # Backward pass
+            loss_gen.backward()  # Backward pass
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()  # Update parameters
         scheduler.step()
@@ -360,6 +294,7 @@ def test_step(
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
         y = (y == 2).long()
+        x_conds = (y, gap_pid, energy)
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -367,86 +302,17 @@ def test_step(
         }
         try:
             with torch.no_grad():
-                outputs = model(X, y, gap_pid, energy, **model_kwargs)
+                #outputs = model(X, y, gap_pid, energy, **model_kwargs)
+                loss_gen = model(X, x_conds, **model_kwargs)
         except Exception as e:
             print(f"batch_idx [{batch_idx}] skiped: Exception during model inference: {e}")
             continue
-        loss = 0
-
-        if outputs["y_pred"] is not None:
-            if use_event_loss:
-                event_mask = y >= 200
-                if event_mask.any():
-                    loss_event = class_cost(
-                        outputs["y_pred"][event_mask][:, 200:], y[event_mask] - 200
-                    ).mean()
-                    logs["loss_class_event"] += loss_event.detach()
-                    loss = loss + loss_event
-                if (~event_mask).any():
-                    loss_class = class_cost(
-                        outputs["y_pred"][~event_mask][:, :200], y[~event_mask]
-                    ).mean()
-                    logs["loss_class"] += loss_class.detach()
-                    loss = loss + loss_class
-            else:
-                loss_class = class_cost(outputs["y_pred"], y).mean()
-                #FIXME
-                #y_int_labels = torch.argmax(y, dim=1)
-                #loss_class = class_cost(outputs["y_pred"], y_int_labels).mean()
-                loss = loss + loss_class
-                logs["loss_class"] += loss_class.detach()
-        #if outputs["z_pred"] is not None:
-        if outputs["loss_gen"] is not None:
-            # nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
-            # loss_gen = (
-            #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
-            # )
-            # loss_gen = loss_gen.mean()
-            loss_gen = outputs["loss_gen"]
-            loss = loss + loss_gen
-            
-            logs["loss_gen"] += loss_gen.detach()
-        if outputs["y_perturb"] is not None:
-            if use_event_loss:
-                event_mask = y >= 200
-                if event_mask.any():
-                    loss_event = torch.mean(
-                        outputs["alpha"][event_mask].squeeze(1)
-                        * class_cost(
-                            outputs["y_perturb"][event_mask][:, 200:],
-                            y[event_mask] - 200,
-                        )
-                    )
-                    logs["loss_event_perturb"] += loss_event.detach()
-                    loss = loss + loss_event
-                if (~event_mask).any():
-                    loss_class = torch.mean(
-                        outputs["alpha"][~event_mask].squeeze(1)
-                        * class_cost(
-                            outputs["y_perturb"][~event_mask][:, :200], y[~event_mask]
-                        )
-                    )
-                    logs["loss_perturb"] += loss_class.detach()
-                    loss = loss + loss_class
-
-            else:
-                loss_perturb = torch.mean(
-                    outputs["alpha"].squeeze(1) * class_cost(outputs["y_perturb"], y)
-                )
-                loss = loss + loss_perturb
-                logs["loss_perturb"] += loss_perturb.detach()
-
-        if use_clip and outputs["z_body"] is not None and outputs["x_body"] is not None:
-            loss_clip = clip_loss(
-                outputs["x_body"].view(X.shape[0], -1),
-                outputs["z_body"].view(X.shape[0], -1),
-                weight=outputs["alpha"],
-            )
-            loss = loss + loss_clip
-            logs["loss_clip"] += loss_clip.detach()
-
+        loss = 0            
+        logs["loss_gen"] += loss_gen.detach()
+        
+        
         #print(f"################3 loss {loss.detach()}")
-        logs["loss"] += loss.detach()
+        logs["loss"] += loss_gen.detach()
 
     if dist.is_initialized():
         for key in logs:
@@ -588,21 +454,21 @@ def save_checkpoint(
     model, epoch, optimizer, loss, lr_scheduler, checkpoint_dir, checkpoint_name
 ):
     save_dict = {
-        "body": model.module.body.state_dict(),
+        "state_dict": model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "epoch": epoch,
         "loss": loss,
         "sched": lr_scheduler.state_dict(),
     }
 
-    if model.module.classifier is not None:
-        save_dict["classifier_head"] = model.module.classifier.state_dict()
+    # if model.module.classifier is not None:
+    #     save_dict["classifier_head"] = model.module.classifier.state_dict()
 
-    if model.module.generator is not None:
-        save_dict["generator_head"] = model.module.generator.state_dict()
+    # if model.module.generator is not None:
+    #     save_dict["generator_head"] = model.module.generator.state_dict()
 
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
+    # if not os.path.exists(checkpoint_dir):
+    #     os.makedirs(checkpoint_dir)
 
     torch.save(save_dict, os.path.join(checkpoint_dir, checkpoint_name))
     print(
@@ -626,58 +492,12 @@ def restore_checkpoint(
         map_location=device,
     )
 
-    base_model = model.module if hasattr(model, "module") else model
-    base_model.to(device)
-    base_model.body.load_state_dict(checkpoint["body"], strict=False)
-
-    if not fine_tune:
-        if base_model.classifier is not None and "classifier_head" in checkpoint:
-            base_model.classifier.load_state_dict(
-                checkpoint["classifier_head"], strict=False
-            )
-
-        if base_model.generator is not None:
-            base_model.generator.load_state_dict(
-                checkpoint["generator_head"], strict=False
-            )
-
-        lr_scheduler.load_state_dict(checkpoint["sched"])
-        startEpoch = checkpoint["epoch"] + 1
-        best_loss = checkpoint["loss"]
-    else:
-        if base_model.classifier is not None and "classifier_head" in checkpoint:
-            classifier_state = checkpoint["classifier_head"]
-            model_state = base_model.classifier.state_dict()
-            filtered_state = {}
-            for k, v in classifier_state.items():
-                if k in model_state and model_state[k].shape == v.shape:
-                    filtered_state[k] = v
-                else:
-                    if is_main_node:
-                        print(
-                            f"Skipping {k}: shape mismatch (checkpoint: {v.shape}, model: {model_state[k].shape if k in model_state else 'missing'})"
-                        )
-
-            base_model.classifier.load_state_dict(filtered_state, strict=False)
-
-        if base_model.generator is not None:
-            classifier_state = checkpoint["generator_head"]
-            model_state = base_model.generator.state_dict()
-            filtered_state = {}
-            for k, v in classifier_state.items():
-                if k in model_state and model_state[k].shape == v.shape:
-                    filtered_state[k] = v
-                else:
-                    if is_main_node:
-                        print(
-                            f"Skipping {k}: shape mismatch (checkpoint: {v.shape}, model: {model_state[k].shape if k in model_state else 'missing'})"
-                        )
-
-            base_model.generator.load_state_dict(filtered_state, strict=False)
-
-        startEpoch = 0.0
-        best_loss = np.inf
-
+    model = model.module if hasattr(model, "module") else model
+    model.to(device)
+    model.load_state_dict(checkpoint["state_dict"], strict=False)
+    lr_scheduler.load_state_dict(checkpoint["sched"])
+    startEpoch = checkpoint["epoch"] + 1
+    best_loss = checkpoint["loss"]
     try:
         optimizer.load_state_dict(checkpoint["optimizer"])
     except Exception:
@@ -690,8 +510,7 @@ def restore_checkpoint(
 def main(args):
     local_rank, rank, size = ddp_setup()
     # set up model
-    #model = PET2(
-    model = PET3(
+    pet3 = PET3(
         input_dim=args.num_feat,
         hidden_size=args.base_dim,
         num_transformers=args.num_transf,
@@ -714,6 +533,16 @@ def main(args):
         num_classes=args.num_classes,
         num_gap_classes=args.num_gap_classes,
     )
+
+    model = EDM(model=pet3,
+            #     num_timesteps=40,
+            #     sigma_min=0.002,  # min noise level
+            #     sigma_max=80,  # max noise level
+            #     sigma_data=0.5,  # standard deviation of data distribution
+            #     rho=7,  # controls the sampling schedule
+            #     P_mean=-1.2,  # mean of log-normal distribution from which noise is drawn for training
+            #     P_std=1.2,  # standard deviation of log-normal distribution from which noise is drawn for training
+            )
     if rank == 0:
         d = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         print("**** Setup ****")
@@ -723,7 +552,7 @@ def main(args):
         )
         print(f"Training on device: {d}, with {size} GPUs")
         print("************")
-
+    
     # load in train data
     # train_loader = load_data(
     #     args.dataset,
@@ -802,9 +631,10 @@ def main(args):
         print(f"Train dataset len: {len(train_loader)}")
         print("************")
 
-    param_groups = get_param_groups(
-        model, args.wd, args.lr, lr_factor=args.lr_factor, fine_tune=args.fine_tune
-    )
+    #TODO re-enable this 
+    # param_groups = get_param_groups(
+    #     model, args.wd, args.lr, lr_factor=args.lr_factor, fine_tune=args.fine_tune
+    # )
 
     if args.optim not in ["adamw", "lion"]:
         raise ValueError(
@@ -814,8 +644,14 @@ def main(args):
     # if args.optim == "lion":
     #     optimizer = Lion(param_groups, betas=(args.b1, args.b2))
     # if args.optim == "adam":
-    optimizer = torch.optim.AdamW(param_groups)
-
+    #optimizer = torch.optim.AdamW(param_groups)
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=args.lr,
+        betas=(0.9, 0.999),
+        eps=1e-8,
+        weight_decay=args.wd # Add your desired weight decay here
+        )
     train_steps = len(train_loader) if args.iterations < 0 else args.iterations
 
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(

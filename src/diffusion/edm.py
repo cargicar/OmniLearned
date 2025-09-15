@@ -61,7 +61,9 @@ class EDM(DiffusionModelBase):
         c_skip, c_out, c_in = [append_dims(c, x_t.ndim) for c in self.get_scalings(sigma)]
         c_noise = 0.25 * torch.log(sigma + 1e-44) * 1000 #  see: https://github.com/openai/consistency_models/blob/main/cm/karras_diffusion.py#L346
         model_output = self.model(c_in * x_t, x_cond, c_noise)
-        return c_skip * x_t + c_out * model_output
+        z_pred = model_output["z_pred"]
+        #return c_skip * x_t + c_out * model_output
+        return c_skip * x_t + c_out * z_pred
 
     # training
     def noise_distribution(self, batch_size):
@@ -105,7 +107,7 @@ class EDM(DiffusionModelBase):
         self,
         x_shape, 
         #conditions,
-        y, gap, energy, #conditions
+        conditions, #conditions
         steps=None,
         solver="heun",
         solver_args={},
@@ -113,8 +115,7 @@ class EDM(DiffusionModelBase):
         progress=False,
     ):
         #x_shape = (num_samples, *self.input_size)
-                
-        conditions = (y, gap, energy)
+        
         num_samples = len(conditions[0])
         assert all(num_samples == len(c) for c in conditions), "all conditions must have the same batch size"
 

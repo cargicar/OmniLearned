@@ -12,10 +12,8 @@ from src.models.layers import (
     TokenAttBlock,
 )
 from src.diffusion.diffusion_utils import MPFourier, perturb, get_logsnr_alpha_sigma
-from src.diffusion.edm import EDM
 
-#For this model we will use PET body as the latent space encoder and a transformer-based head before diffusion model
-# As Sep 12 / 2025, I am not yet concerned with the classifier head, just the generator head
+
 class PET3(nn.Module):
     def __init__(
         self,
@@ -70,6 +68,7 @@ class PET3(nn.Module):
             pid_dim=pid_dim,
             add_info=add_info,
             add_dim=add_dim,
+            use_time=use_time,
         )
 
         self.num_add = self.body.num_add
@@ -105,17 +104,6 @@ class PET3(nn.Module):
                 num_classes=num_classes,
                 num_gap_classes=num_gap_classes,
             )
-            #NOTE Diffusion model
-            self.diffusion = EDM(
-                model=self.generator,
-            #     num_timesteps=40,
-            #     sigma_min=0.002,  # min noise level
-            #     sigma_max=80,  # max noise level
-            #     sigma_data=0.5,  # standard deviation of data distribution
-            #     rho=7,  # controls the sampling schedule
-            #     P_mean=-1.2,  # mean of log-normal distribution from which noise is drawn for training
-            #     P_std=1.2,  # standard deviation of log-normal distribution from which noise is drawn for training
-            )
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -131,7 +119,7 @@ class PET3(nn.Module):
         # Specify parameters that should not be decayed
         return {"norm", "scale", "token"}
 
-    def forward(self, x, y, gap, energy, cond=None, pid=None, add_info=None):
+    def forward(self, x, x_conds, cond=None, pid=None, add_info=None):
         y_pred, y_perturb, z_pred, v, x_body, z_body = (
             None,
             None,
@@ -140,15 +128,15 @@ class PET3(nn.Module):
             None,
             None,
         )
-        #time = torch.rand(size=(x.shape[0],)).to(x.device)
-        #_, alpha, sigma = get_logsnr_alpha_sigma(time)
+        time = torch.rand(size=(x.shape[0],)).to(x.device)
+        _, alpha, sigma = get_logsnr_alpha_sigma(time)
+        
+        y, gap, energy = x_conds
         if self.mode == "generator" or self.mode == "pretrain":
             #z, v = perturb(x, time)
-            # laten representation
-            z_body = self.body(x, cond, pid, add_info)
-            #NOTE z_body act as a laten pcloud
-            z_conds = (y, gap, energy)  # Conditioning variables for diffusion model
-            loss_gen= self.diffusion(z_body, z_conds) #z_conts = y, gap, energy
+            z_body = self.body(x, cond, pid, add_info, time)
+            z_pred = self.generator(z_body, y, gap, energy)
+
         if self.mode == "classifier" or self.mode == "pretrain":
             # x_body = [B, global_emb+local_emb, mlp_out_channels]
             x_body = self.body(x, cond, pid, add_info, torch.zeros_like(time))
@@ -163,7 +151,7 @@ class PET3(nn.Module):
             "v": v,
             "x_body": x_body,
             "z_body": z_body,
-            "loss_gen": loss_gen if (self.mode == "generator" or self.mode == "pretrain") else None,
+            "alpha": alpha**2,
         }
 #TODO add y, gap, energy to the classifier forward function
 class PET_classifier(nn.Module):
@@ -246,13 +234,11 @@ class PET_generator(nn.Module):
         num_add=1,
         num_classes=2,
         num_gap_classes=4,
-        use_time=True,
     ):
         super().__init__()
         self.num_tokens = num_tokens
         self.num_add = num_add
         self.num_classes = num_classes
-        self.use_time = use_time
 
         self.pid_embed = nn.Sequential(
             nn.Embedding(num_classes, hidden_size),
@@ -286,19 +272,6 @@ class PET_generator(nn.Module):
                 drop=mlp_drop,
             ),
         )
-
-        if self.use_time:
-            # Time embedding module for diffusion timesteps
-            self.MPFourier = MPFourier(hidden_size)
-            self.time_embed = MLP(
-                in_features=hidden_size,
-                hidden_features=int(mlp_ratio * hidden_size),
-                out_features=hidden_size,
-                norm_layer=norm_layer,
-                act_layer=act_layer,
-                bias=False,
-            )
-            #self.num_add += 1
 
         self.in_blocks = nn.ModuleList(
             [
@@ -339,10 +312,46 @@ class PET_generator(nn.Module):
 
         self.apply(_init_weights)
 
-    def forward(self, x, conds, time=None):  #conds = (y,z,e) e is the new input for Energy
+    # def forward(self, x, y):
+    #     # Add tokens and label embedding
+    #     mask = x[:, :, 3:4] != 0
+    #     mask = torch.cat([torch.ones_like(mask[:, :1]), mask], 1)
+    #     x = torch.cat([self.pid_embed(y).unsqueeze(1), x], 1) * mask
+    #     #x = torch.cat([self.pid_embed(y), x], 1)* mask
+    #     for ib, blk in enumerate(self.in_blocks):
+    #         x = blk(x, mask=mask)
+
+    #     x = (
+    #         self.fc(x[:, self.num_add + self.num_tokens + 1 :])
+    #         * mask[:, self.num_add + self.num_tokens + 1 :]
+    #     )
+    #     return self.out(x) * mask[:, self.num_add + self.num_tokens + 1 :]
+    
+    # def forward(self, x, y, gap):  # z is the new input for gap_pid
+    #     # Add tokens and label embedding
+    #     mask = x[:, :, 3:4] != 0
+    #     mask = torch.cat([torch.ones_like(mask[:, :2]), mask], 1) # Note: mask size changed from 1 to 2
+        
+    #     # Embed pid and gap_pid
+    #     pid_embedding = self.pid_embed(y).unsqueeze(1)
+    #     gap_pid_embedding = self.gap_pid_embed(gap).unsqueeze(1)
+        
+    #     # Concatenate both embeddings with the input x
+    #     x = torch.cat([pid_embedding, gap_pid_embedding, x], 1) * mask
+        
+    #     for ib, blk in enumerate(self.in_blocks):
+    #         x = blk(x, mask=mask)
+
+    #     x = (
+    #         self.fc(x[:, self.num_add + self.num_tokens + 2 :]) # Slicing adjusted for 2 embeddings
+    #         * mask[:, self.num_add + self.num_tokens + 2 :]
+    #     )
+    #     return self.out(x) * mask[:, self.num_add + self.num_tokens + 2 :]
+
+    def forward(self, x, y, z, e):  # e is the new input for Energy
             # Ensure the Energy tensor has a feature dimension
-            y, z, e = conds
             e = e.unsqueeze(-1) if e.dim() == 1 else e
+
             # Add tokens and label embedding
             # The number of added tokens is now 3 (pid, gap_pid, energy)
             mask = x[:, :, 3:4] != 0
@@ -355,27 +364,17 @@ class PET_generator(nn.Module):
             
             # Concatenate all three embeddings with the input x
             x = torch.cat([pid_embedding, gap_pid_embedding, energy_embedding, x], 1) * mask
-
-            if time is not None:
-                # Create time token
-                x = torch.cat([self.time_embed(self.MPFourier(time)).unsqueeze(1), x], 1)
-
-            # Create a new mask based on the updated point cloud with additional tokens
-            mask = x[:, :, 3:4] != 0
-
+            
             for ib, blk in enumerate(self.in_blocks):
                 x = blk(x, mask=mask)
-            #TODO check if I need to adjust the slicing here. This is one of the edits to omnilearned I am not sure about.
+
             # Adjust the slicing to account for the three added tokens
             x = (
                 self.fc(x[:, self.num_add + self.num_tokens + 3 :]) 
                 * mask[:, self.num_add + self.num_tokens + 3 :]
             )
-            
             return self.out(x) * mask[:, self.num_add + self.num_tokens + 3 :]
-
-            #return x
-#NOTE in my head PET_body is Point-Bert transformer for feature extraction. It follows ViT philosophy
+    
 class PET_body(nn.Module):
     def __init__(
         self,
@@ -392,17 +391,19 @@ class PET_body(nn.Module):
         feature_drop=0.0,
         num_tokens=4,
         K=15,
-        use_int=False,
+        use_int=True,
         conditional=True,
         cond_dim=3,
         pid=False,
         pid_dim=9,
         add_info=False,
         add_dim=4,
+        use_time=False,
     ):
         super().__init__()
         self.input_dim = input_dim
         self.use_int = use_int
+        self.use_time = use_time
         self.conditional = conditional
         self.pid = pid
         self.add_info = add_info
@@ -451,6 +452,18 @@ class PET_body(nn.Module):
             )
             self.num_add += 1
 
+        if self.use_time:
+            # Time embedding module for diffusion timesteps
+            self.MPFourier = MPFourier(hidden_size)
+            self.time_embed = MLP(
+                in_features=hidden_size,
+                hidden_features=int(mlp_ratio * hidden_size),
+                out_features=hidden_size,
+                norm_layer=norm_layer,
+                act_layer=act_layer,
+                bias=False,
+            )
+            self.num_add += 1
 
         if self.add_info:
             self.add_embed = nn.Sequential(
@@ -509,7 +522,7 @@ class PET_body(nn.Module):
 
         self.apply(_init_weights)
 
-    def forward(self, x, cond=None, pid=None, add_info=None):
+    def forward(self, x, cond=None, pid=None, add_info=None, time=None):
         B = x.shape[0]
         mask = x[:, :, 3:4] != 0
         token = self.token.expand(B, -1, -1)
@@ -532,19 +545,18 @@ class PET_body(nn.Module):
         if pid is not None and self.pid:
             # Encode the PID info
             x = x + self.pid_embed(pid) * mask
-        #TODO add gap classes as add_info
         if add_info is not None and self.add_info:
             x = x + self.add_embed(add_info) * mask
 
         #conditional embedding: [B, jet_fetures] -> [B, mlp_out_channels=64]
-        # if cond is not None and self.conditional:
-        #     cond_emb= self.cond_embed(cond) 
-        #     # Conditional information: jet level quantities for example
-        #     x = torch.cat([cond_emb(cond).unsqueeze(1), x], 1)
+        if cond is not None and self.conditional:
+            cond_emb= self.cond_embed(cond) 
+            # Conditional information: jet level quantities for example
+            x = torch.cat([cond_emb(cond).unsqueeze(1), x], 1)
 
-        # if self.use_time and time is not None:
-        #     # Create time token
-        #     x = torch.cat([self.time_embed(self.MPFourier(time)).unsqueeze(1), x], 1)
+        if self.use_time and time is not None:
+            # Create time token
+            x = torch.cat([self.time_embed(self.MPFourier(time)).unsqueeze(1), x], 1)
 
         x = torch.cat([token, x], 1)
 

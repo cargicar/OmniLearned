@@ -32,7 +32,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import argparse
 import os # Import os for default path if needed
-#from diffusion import sampler
+from src.diffusion.diffusion_utils import sampler
 
 
 def parse_arguments():
@@ -296,7 +296,7 @@ def gen(
     X, energy, y, gap_pid = batch
     X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
-    plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
+    #plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
     model_kwargs = {
         key: (batch[key].to(device) if batch[key] is not None else None)
         for key in ["cond", "pid", "add_info"]
@@ -307,12 +307,11 @@ def gen(
         #pts = sampler(model, X, y, gap_pid, energy, 1000, 500, model_kwargs)
         #generated_events = model.sample(conditions=conditions, progress=True, **cfg.sampling).squeeze(1)  # squeeze to remove the output channel dimension
         try:
-            z_body = model.body(x_shape, cond=None, pid=None, add_info=None)
-            generated_events = model.diffusion.sample(z_body, y, gap_pid, energy, progress=True).squeeze(1)  # squeeze to remove the output channel dimension
+            model= model.module
         except AttributeError:
-            z_body = model.module.body(x_shape, cond=None, pid=None, add_info=None)
-            generated_events = model.module.diffusion.sample(z_body, y, gap_pid, energy, progress=True).squeeze(1)  # squeeze to remove the output channel dimension
-            
+            model= model
+        
+        generated_events = sampler(model, X, y, gap_pid, energy, num_steps = 1000,  num_points= 500)  # squeeze to remove the output channel dimension
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
         #plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
         plot_batch_3d(generated_events, y, gap_pid, energy, title = "from model sampler")
