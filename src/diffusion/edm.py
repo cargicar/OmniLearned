@@ -103,23 +103,25 @@ class EDM(DiffusionModelBase):
     @torch.inference_mode()
     def sample(
         self,
-        x_0, #NOTE
-        conditions,
+        x, #NOTE
+        #conditions,
+        y, gap, energy, #conditions
         steps=None,
         solver="heun",
         solver_args={},
         clip_denoised=False,
         progress=False,
     ):
+        #x_shape = (num_samples, *self.input_size)
+                
+        conditions = (y, gap, energy)
         num_samples = len(conditions[0])
         assert all(num_samples == len(c) for c in conditions), "all conditions must have the same batch size"
-        #x_shape = (num_samples, *self.input_size)
-        x_shape = x_0.shape #NOTE
 
         ts = self.get_timesteps(steps)
         sigmas = self.get_sigmas(ts)
 
-        x_T = torch.randn(x_shape, device=self.device) * self.sigma_max
+        x_T = torch.randn(x.shape, device=self.device) * self.sigma_max
 
         sample_fn = {
             "heun": sample_heun,

@@ -1,20 +1,22 @@
+import rootutils
 import json
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
-from network import PET2
-from dataloader import load_data
+rootutils.setup_root(__file__, pythonpath=True)
+from src.models.omnilearned import PET2
+from src.models.calolearned import PET3
+#from dataloader import load_data
 import argparse
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
-from dataset import ShapeNetCore
-from G4_dataset import HDF5Dataset, pad_collate_fn, PklDataset
+from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore
 
-from utils import (
+from scripts.utils import (
     is_master_node,
     ddp_setup,
     get_param_groups,
@@ -27,11 +29,10 @@ import torch.amp as amp
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from dataset import ShapeNetCore
 
 import argparse
 import os # Import os for default path if needed
-from diffusion import sampler
+#from diffusion import sampler
 
 
 def parse_arguments():
@@ -44,7 +45,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 # --- General/Output Arguments ---
     
-    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_temp',
+    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
                          help="Base path to the dataset directory.")
     
     #parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets/G4_h5/all_sims_combined.h5",
@@ -301,10 +302,20 @@ def gen(
         for key in ["cond", "pid", "add_info"]
         if key in batch
     }
+    x_shape = X.shape
     with torch.no_grad():
-        pts = sampler(model, X, y, gap_pid, energy, 1000, 500, model_kwargs)
+        #pts = sampler(model, X, y, gap_pid, energy, 1000, 500, model_kwargs)
+        #generated_events = model.sample(conditions=conditions, progress=True, **cfg.sampling).squeeze(1)  # squeeze to remove the output channel dimension
+        try:
+            z_body = model.body(x_shape, cond=None, pid=None, add_info=None)
+            generated_events = model.diffusion.sample(z_body, y, gap_pid, energy, progress=True).squeeze(1)  # squeeze to remove the output channel dimension
+        except AttributeError:
+            z_body = model.module.body(x_shape, cond=None, pid=None, add_info=None)
+            generated_events = model.module.diffusion.sample(z_body, y, gap_pid, energy, progress=True).squeeze(1)  # squeeze to remove the output channel dimension
+            
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
-        plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
+        #plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
+        plot_batch_3d(generated_events, y, gap_pid, energy, title = "from model sampler")
     
     # return (
     #     torch.cat(pts).to(device),
@@ -339,7 +350,7 @@ def restore_checkpoint(
 def main(args):
     local_rank, rank, size = ddp_setup()
     # set up model
-    model = PET2(
+    model = PET3(
         input_dim=args.num_feat,
         hidden_size=args.base_dim,
         num_transformers=args.num_transf,
@@ -384,8 +395,7 @@ def main(args):
     #     rank=rank,
     #     size=size,
     # )
-    #FIXME hardcoded path for dev and deb
-    #dataset_path = f"/home/carlos/Rnet_local/datasets/shapenetCore/"
+    
     pkl_files_path = args.path
     dataset = PklDataset(pkl_files_path)
     

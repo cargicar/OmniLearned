@@ -106,7 +106,7 @@ class PET3(nn.Module):
                 num_gap_classes=num_gap_classes,
             )
             #NOTE Diffusion model
-            self.edm = EDM(
+            self.diffusion = EDM(
                 model=self.generator,
             #     num_timesteps=40,
             #     sigma_min=0.002,  # min noise level
@@ -148,7 +148,7 @@ class PET3(nn.Module):
             z_body = self.body(x, cond, pid, add_info)
             #NOTE z_body act as a laten pcloud
             z_conds = (y, gap, energy)  # Conditioning variables for diffusion model
-            loss_gen= self.edm(z_body, z_conds) #z_conts = y, gap, energy
+            loss_gen= self.diffusion(z_body, z_conds) #z_conts = y, gap, energy
         if self.mode == "classifier" or self.mode == "pretrain":
             # x_body = [B, global_emb+local_emb, mlp_out_channels]
             x_body = self.body(x, cond, pid, add_info, torch.zeros_like(time))
