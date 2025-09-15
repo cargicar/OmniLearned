@@ -302,17 +302,19 @@ def gen(
         for key in ["cond", "pid", "add_info"]
         if key in batch
     }
-    x_shape = X.shape
     with torch.no_grad():
         #pts = sampler(model, X, y, gap_pid, energy, 1000, 500, model_kwargs)
         #generated_events = model.sample(conditions=conditions, progress=True, **cfg.sampling).squeeze(1)  # squeeze to remove the output channel dimension
         try:
-            z_body = model.body(x_shape, cond=None, pid=None, add_info=None)
-            generated_events = model.diffusion.sample(z_body, y, gap_pid, energy, progress=True).squeeze(1)  # squeeze to remove the output channel dimension
+            z_body = model.body(X, cond=None, pid=None, add_info=None)
+            z_body_shape = z_body.shape
+            generated_events = model.diffusion.sample(z_body_shape, y, gap_pid, energy, progress=True).squeeze(1)  # squeeze to remove the output channel dimension
         except AttributeError:
-            z_body = model.module.body(x_shape, cond=None, pid=None, add_info=None)
-            generated_events = model.module.diffusion.sample(z_body, y, gap_pid, energy, progress=True).squeeze(1)  # squeeze to remove the output channel dimension
+            z_body = model.module.body(X, cond=None, pid=None, add_info=None)
+            z_body_shape = z_body.shape
+            generated_events = model.module.diffusion.sample(z_body_shape, y, gap_pid, energy, progress=True).squeeze(1)  # squeeze to remove the output channel dimension
             
+        breakpoint()
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
         #plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
         plot_batch_3d(generated_events, y, gap_pid, energy, title = "from model sampler")
