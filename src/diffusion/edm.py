@@ -103,7 +103,7 @@ class EDM(DiffusionModelBase):
     @torch.inference_mode()
     def sample(
         self,
-        x, #NOTE
+        x_shape, 
         #conditions,
         y, gap, energy, #conditions
         steps=None,
@@ -121,7 +121,7 @@ class EDM(DiffusionModelBase):
         ts = self.get_timesteps(steps)
         sigmas = self.get_sigmas(ts)
 
-        x_T = torch.randn(x.shape, device=self.device) * self.sigma_max
+        x_T = torch.randn(x_shape, device=self.device) * self.sigma_max
 
         sample_fn = {
             "heun": sample_heun,
