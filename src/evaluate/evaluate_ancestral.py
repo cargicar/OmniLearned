@@ -4,9 +4,10 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
+
 rootutils.setup_root(__file__, pythonpath=True)
+from src.models.omnilearnedv2 import PET3
 from src.models.omnilearned import PET2
-from src.models.calolearned import PET3
 #from dataloader import load_data
 import argparse
 import torch.distributed as dist
@@ -15,8 +16,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore
+from src.diffusion.diffusion_utils import sampler
 
-from scripts.utils import (
+from src.utils import (
     is_master_node,
     ddp_setup,
     get_param_groups,
@@ -29,10 +31,11 @@ import torch.amp as amp
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from src.data.dataset import ShapeNetCore
 
 import argparse
 import os # Import os for default path if needed
-from src.diffusion.diffusion_utils import sampler
+
 
 
 def parse_arguments():
@@ -296,25 +299,17 @@ def gen(
     X, energy, y, gap_pid = batch
     X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
-    #plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
+    plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
+    model = model.module if hasattr(model, "module") else model
     model_kwargs = {
         key: (batch[key].to(device) if batch[key] is not None else None)
         for key in ["cond", "pid", "add_info"]
         if key in batch
     }
-    x_shape = X.shape
     with torch.no_grad():
-        #pts = sampler(model, X, y, gap_pid, energy, 1000, 500, model_kwargs)
-        #generated_events = model.sample(conditions=conditions, progress=True, **cfg.sampling).squeeze(1)  # squeeze to remove the output channel dimension
-        try:
-            model= model.module
-        except AttributeError:
-            model= model
-        
-        generated_events = sampler(model, X, y, gap_pid, energy, num_steps = 1000,  num_points= 500)  # squeeze to remove the output channel dimension
+        pts = sampler(model, X, y, gap_pid, energy, 1000, 500)
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
-        #plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
-        plot_batch_3d(generated_events, y, gap_pid, energy, title = "from model sampler")
+        plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
     
     # return (
     #     torch.cat(pts).to(device),
@@ -349,7 +344,7 @@ def restore_checkpoint(
 def main(args):
     local_rank, rank, size = ddp_setup()
     # set up model
-    model = PET3(
+    model = PET2(
         input_dim=args.num_feat,
         hidden_size=args.base_dim,
         num_transformers=args.num_transf,
@@ -394,7 +389,8 @@ def main(args):
     #     rank=rank,
     #     size=size,
     # )
-    
+    #FIXME hardcoded path for dev and deb
+    #dataset_path = f"/home/carlos/Rnet_local/datasets/shapenetCore/"
     pkl_files_path = args.path
     dataset = PklDataset(pkl_files_path)
     

@@ -14,6 +14,4 @@
 module load conda
 conda activate omnilearned
 module load pytorch
-#srun python src/omnilearned/train.py --save_tag test --dataset G4 --path /pscratch/sd/c/ccardona/datasets --num_classes 7
-#srun python src/omnilearned/train.py --save_tag test --num_classes 7
-srun python src/omnilearned/train.py --save_tag small_ds --num_classes 2
+srun python scripts/train.py --num_classes 2

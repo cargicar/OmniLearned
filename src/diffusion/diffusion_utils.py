@@ -71,8 +71,7 @@ def sampler(model, X, y, gap, energy, num_steps= 1000, num_points= 500, device =
         # We sample from a high time (e.g., 1.0) down to a low time (e.g., epsilon)
         data_shape = x.shape
         batch_size= x.shape[0]
-        timesteps = torch.linspace(1.0, 0.0, num_steps + 1).to(device)
-        z_conds = (y, gap, energy)  # Conditioning variables for diffusion model
+        #timesteps = torch.linspace(1.0, 0.0, num_steps + 1).to(device)
         
         for time_step in torch.arange(num_steps, 0, -1):
             #time = torch.rand(size=(x.shape[0],)).to(x.device) #training time
@@ -85,9 +84,9 @@ def sampler(model, X, y, gap, energy, num_steps= 1000, num_points= 500, device =
             #v = model(x, t, cond)
             # Predict the velocity
             # The model's body takes the noisy data and conditions
-            z_body = model.body(x, cond, pid, add_info)
+            z_body = model.body(x, cond, pid, add_info, t)
             # The generator predicts the velocity
-            z_pred_v = model.generator(z_body, z_conds, t)
+            z_pred_v = model.generator(z_body, y, gap, energy)
             #output_dic = model(x,y, **model_kwargs) # Doing from the whole model is weird. Does not take time?  
             #z_pred_v = output_dic["z_pred"]
             # --- Denoising Step ---
