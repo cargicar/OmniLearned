@@ -1,4 +1,3 @@
-""" Naive sampling with RF. Unify this with train_RF.py later. """
 import rootutils
 import json
 import numpy as np
@@ -18,6 +17,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from lion_pytorch import Lion
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore
 from src.diffusion.diffusion_utils import RF_sampler
+from src.models.rectified_flow import RectifiedFlow
 
 from src.utils import (
     is_master_node,
@@ -202,34 +202,52 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
         plt.savefig(f"results/gen_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
         plt.close()
 
-def gen(
-    model,
-    dataloader,
-    device="cuda" if torch.cuda.is_available() else "cpu",
-):
-    model.eval()
+def train_rectified_flow(rectified_flow, 
+                         dataloader, 
+                         optimizer, 
+                         pairs, 
+                         batchsize, 
+                         inner_iters, 
+                         device = "cuda" if torch.cuda.is_available() else "cpu",
+                         cond=None, pid=None, add_info=None,
+                         ):
+    loss_curve = []
+    rectified_flow.model = rectified_flow.model.module if hasattr(rectified_flow.model, "module") else rectified_flow.model
+    rectified_flow.model.train()
     pts = []
     iterdata = iter(dataloader)
     batch = next(iterdata)
     #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
-    X, energy, y, gap_pid = batch
-    X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
+    x_0, energy, y, gap_pid = batch
+    x_0, energy, y, gap_pid = x_0.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
     #plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
-    model = model.module if hasattr(model, "module") else model
-    model_kwargs = {
-        key: (batch[key].to(device) if batch[key] is not None else None)
-        for key in ["cond", "pid", "add_info"]
-        if key in batch
-    }
-    with torch.no_grad():
-        pts = RF_sampler(model, X, y, gap_pid, energy, 1000, 500)
-        #plot_batch_3d(outputs["x_body"], title = "from model x_body")
-        plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
-    
-    # return (
-    #     torch.cat(pts).to(device),
-    # )
+    x_1 = torch.randn_like(x_0)
+
+    x_0 = x_0.detach().clone()[torch.randperm(len(x_0))]
+    x_1 = x_1.detach().clone()[torch.randperm(len(x_1))]
+    x_pairs = torch.stack([x_0, x_1], dim=1)
+    print(f"pairs shape {x_pairs.shape}")
+    for i in range(inner_iters+1):
+        optimizer.zero_grad()
+        indices = torch.randperm(len(pairs))[:batchsize]
+        batch = pairs[indices]
+        z0 = batch[:, 0].detach().clone()
+        z1 = batch[:, 1].detach().clone()
+        z_t, t, target = rectified_flow.get_train_tuple(z0=z0, z1=z1)
+
+        #pred = rectified_flow.model(z_t, t)
+        z_body = rectified_flow.model.body(z_t, cond, pid, add_info, t)
+        # The generator predicts the velocity
+        pred = rectified_flow.model.generator(z_body, y, gap_pid, energy)
+        loss = (target - pred).view(pred.shape[0], -1).abs().pow(2).sum(dim=1)
+        loss = loss.mean()
+        loss.backward()
+        
+        optimizer.step()
+        loss_curve.append(np.log(loss.item())) ## to store the loss curve
+
+    return rectified_flow, loss_curve
 
 
 
@@ -255,6 +273,7 @@ def restore_checkpoint(
 
     if base_model.generator is not None:
         base_model.generator.load_state_dict(checkpoint["generator_head"])
+
 
 
 def main(args):
@@ -374,8 +393,20 @@ def main(args):
         **kwarg,
     )
 
-    #eval_model(model, val_loader, device=device)
-    gen(model, val_loader, device)
+    # iterations = 10000
+    # batchsize = 2048
+    # input_dim = 2
+    iterations = 10000
+    batchsize = 2048
+    input_dim = 2
+
+    rectified_flow_1 = RectifiedFlow(model=model, num_steps=100)
+    optimizer = torch.optim.Adam(rectified_flow_1.model.parameters(), lr=1e-4)
+
+    rectified_flow_1, loss_curve = train_rectified_flow(rectified_flow_1, optimizer, x_pairs, batchsize, iterations)
+    plt.plot(np.linspace(0, iterations, iterations+1), loss_curve[:(iterations+1)])
+    plt.title('Training Loss Curve')
+    
 
     dist.destroy_process_group()
 

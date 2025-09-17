@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
 
 rootutils.setup_root(__file__, pythonpath=True)
-from src.models.omnilearnedv2 import PET3
+#from src.models.omnilearnedv2 import PET3
 from src.models.omnilearned import PET2
 #from dataloader import load_data
 import argparse
@@ -14,7 +14,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
-from diffusers.optimization import get_cosine_schedule_with_warmup
+#from diffusers.optimization import get_cosine_schedule_with_warmup
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore
 from src.diffusion.diffusion_utils import DDIM_sampler
 
@@ -47,17 +47,17 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 # --- General/Output Arguments ---
+        
+    # parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
+    #                      help="Base path to the dataset directory.")
     
-    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
+    parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test/",
                          help="Base path to the dataset directory.")
     
-    #parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets/G4_h5/all_sims_combined.h5",
-    #                     help="Base path to the dataset directory.")
-    
-    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
-                          help="Output directory for logs, checkpoints, and results.")
-    #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
-    #                    help="Output directory for logs, checkpoints, and results.")
+    # parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
+    #                       help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
+                        help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="detector_cats",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
@@ -289,7 +289,7 @@ def gather_tensors(x):
 def gen(
     model,
     dataloader,
-    device,
+    device = "cuda" if torch.cuda.is_available() else "cpu",
 ):
     model.eval()
     pts = []

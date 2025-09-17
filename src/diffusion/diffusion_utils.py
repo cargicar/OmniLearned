@@ -128,19 +128,21 @@ def RF_sampler(model, X, y, gap, energy, num_steps= 100, num_points= 500, device
     with torch.no_grad():
 
         #x_T = torch.randn([batch_size, num_points]).to(context.device)
-        x = torch.randn_like(X).to(device)
+        x = torch.randn_like(X)#.to(device)
         # Discretize the time from 0 to 1
         dt = 1.0 / num_steps
-        times = torch.arange(0, 1, dt).to(device)
+        #times = torch.arange(0, 1, dt)#.to(device)
         #traj = {self.var_sched.num_steps: x_T}# Start with the input noise
         # We sample from a high time (e.g., 1.0) down to a low time (e.g., epsilon)
         data_shape = x.shape
         batch_size= x.shape[0]
         #timesteps = torch.linspace(1.0, 0.0, num_steps + 1).to(device)
         
-        for time_step in times:
+        #for time_step in times:
+        for time_step in torch.arange(num_steps, 0, -1):
             #time = torch.rand(size=(x.shape[0],)).to(x.device) #training time
-            t = time_step.repeat(x.shape[0])[:, None] # Adjust shape for model input
+            #t = time_step.repeat(x.shape[0])[:, None] # Adjust shape for model input
+            t = torch.ones((batch_size, )).to(x.device) * time_step / num_steps
         
             # Predict the velocity field with your model
             # The model's body takes the noisy data and conditions
