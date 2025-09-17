@@ -205,8 +205,6 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
 def train_rectified_flow(rectified_flow, 
                          dataloader, 
                          optimizer, 
-                         pairs, 
-                         batchsize, 
                          inner_iters, 
                          device = "cuda" if torch.cuda.is_available() else "cpu",
                          cond=None, pid=None, add_info=None,
@@ -219,6 +217,7 @@ def train_rectified_flow(rectified_flow,
     batch = next(iterdata)
     #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
     x_0, energy, y, gap_pid = batch
+    batchsize = x_0.shape[0]
     x_0, energy, y, gap_pid = x_0.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
     #plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
@@ -230,8 +229,8 @@ def train_rectified_flow(rectified_flow,
     print(f"pairs shape {x_pairs.shape}")
     for i in range(inner_iters+1):
         optimizer.zero_grad()
-        indices = torch.randperm(len(pairs))[:batchsize]
-        batch = pairs[indices]
+        indices = torch.randperm(len(x_pairs))[:batchsize]
+        batch = x_pairs[indices]
         z0 = batch[:, 0].detach().clone()
         z1 = batch[:, 1].detach().clone()
         z_t, t, target = rectified_flow.get_train_tuple(z0=z0, z1=z1)
@@ -301,13 +300,13 @@ def main(args):
         num_classes=args.num_classes,
     )
     if rank == 0:
-        d = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         print("**** Setup ****")
         print(
             "Total params: %.2fM"
             % (sum(p.numel() for p in model.parameters()) / 1000000.0)
         )
-        print(f"Evaluating on device: {d}, with {size} GPUs")
+        print(f"Evaluating on device: {device}, with {size} GPUs")
         print("************")
 
     # load in train data
@@ -396,16 +395,19 @@ def main(args):
     # iterations = 10000
     # batchsize = 2048
     # input_dim = 2
-    iterations = 10000
-    batchsize = 2048
-    input_dim = 2
-
+    iterations = 100
+    
     rectified_flow_1 = RectifiedFlow(model=model, num_steps=100)
     optimizer = torch.optim.Adam(rectified_flow_1.model.parameters(), lr=1e-4)
 
-    rectified_flow_1, loss_curve = train_rectified_flow(rectified_flow_1, optimizer, x_pairs, batchsize, iterations)
+    rectified_flow_1, loss_curve = train_rectified_flow(rectified_flow_1, train_loader, optimizer, iterations)
     plt.plot(np.linspace(0, iterations, iterations+1), loss_curve[:(iterations+1)])
-    plt.title('Training Loss Curve')
+    title = f'Training Loss Curve'
+    plt.title(title)
+    #plt.savefig(f"results/gen_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
+    plt.savefig(f"results/gen_{i}_{title}.png")
+    plt.close()
+
     
 
     dist.destroy_process_group()

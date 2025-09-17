@@ -9,8 +9,10 @@ class RectifiedFlow():
     self.N = num_steps
   
   def get_train_tuple(self, z0=None, z1=None):
-    t = torch.rand((z1.shape[0], 1))
-    z_t =  t * z1 + (1.-t) * z0
+    #t = torch.rand((z1.shape[0], 1))
+    t = torch.rand(size=(z1.shape[0],)).to(z0.device)
+    t0 = t[:, None, None] #TODO double check if this is the right thing to do
+    z_t =  t0 * z1 + (1.-t0) * z0
     target = z1 - z0 
         
     return z_t, t, target
