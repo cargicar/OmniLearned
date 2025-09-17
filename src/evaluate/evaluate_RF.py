@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
+import torch.nn.functional as F
 
 rootutils.setup_root(__file__, pythonpath=True)
 from src.models.omnilearnedv2 import PET3
@@ -16,7 +17,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore
-from src.diffusion.diffusion_utils import sampler
+from src.diffusion.diffusion_utils import RF_sampler
 
 from src.utils import (
     is_master_node,
@@ -201,91 +202,6 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
         plt.savefig(f"results/gen_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
         plt.close()
 
-def gather_tensors(x):
-    """
-    If running under DDP, all_gather x from every rank, concat, then return as numpy.
-    Otherwise just .cpu().numpy().
-    """
-    if dist.is_initialized():
-        ws = dist.get_world_size()
-        # pre‐allocate one buffer per rank
-        buf = [torch.zeros_like(x) for _ in range(ws)]
-        dist.all_gather(buf, x)
-        x = torch.cat(buf, dim=0)
-    return x.cpu()
-
-
-def eval_model(
-    model,
-    val_loader,
-    device="cpu",
-):
-    start = time.time()
-    prediction, mass, pt, labels = test_step(model, val_loader, device)
-
-    if dist.is_initialized():
-        prediction, mass, pt, labels = [
-            gather_tensors(t) for t in (prediction, mass, pt, labels)
-        ]
-
-    if is_master_node():
-        print_metrics(prediction.softmax(-1).numpy(), labels.numpy())
-    if is_master_node():
-        print("Time taken for evaluation is {} sec".format(time.time() - start))
-    #     if use_event_loss:
-    #         np.savez(f"/pscratch/sd/v/vmikuni/outputs_{dataset}.npz",
-    #                  # prediction= torch.nn.functional.log_softmax(prediction[:,:200],dim=-1).numpy(),
-    #                  # event_prediction = torch.nn.functional.log_softmax(prediction[:,200:],dim=-1).numpy(),
-    #                  prediction= prediction[:,:200].softmax(-1).numpy(),
-    #                  event_prediction = prediction[:,200:].softmax(-1).numpy(),
-    #                  mass=mass.numpy(), pt=pt.numpy())
-    #     else:
-    #         np.savez(f"/pscratch/sd/v/vmikuni/outputs_{dataset}.npz",
-    #                  prediction= torch.nn.functional.log_softmax(prediction,dim=-1).numpy(),
-    #                  mass=mass.numpy(), pt=pt.numpy())
-
-
-def test_step(
-    model,
-    dataloader,
-    device,
-):
-    model.eval()
-
-    preds = []
-    labels = []
-    masses = []
-    pts = []
-
-    for ib, batch in enumerate(dataloader):
-        if ib > 30000:
-            break
-        #X, y = batch["X"].to(device, dtype=torch.float), batch["y"].to(device)
-        X = batch["pointcloud"].to(device, dtype=torch.float)
-        y = batch["cate"].to(device)
-        plot_batch_3d(X, y, title = "from dataset")
-        model_kwargs = {
-            key: (batch[key].to(device) if batch[key] is not None else None)
-            for key in ["cond", "pid", "add_info"]
-            if key in batch
-        }
-        with torch.no_grad():
-            outputs = model(X, y, **model_kwargs)
-            #plot_batch_3d(outputs["x_body"], title = "from model x_body")
-            plot_batch_3d(outputs["z_body"], y, title = "from model sampler")
-        preds.append(outputs["y_pred"])
-        labels.append(y)
-        masses.append(torch.exp(batch["cond"][:, 1]))
-        pts.append(torch.exp(batch["cond"][:, 0]))
-
-    return (
-        torch.cat(preds).to(device),
-        torch.cat(masses).to(device),
-        torch.cat(pts).to(device),
-        torch.cat(labels).to(device),
-    )
-
-
 def gen(
     model,
     dataloader,
@@ -299,7 +215,7 @@ def gen(
     X, energy, y, gap_pid = batch
     X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
-    plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
+    #plot_batch_3d(X, y, gap_pid, energy, title = "from dataset")
     model = model.module if hasattr(model, "module") else model
     model_kwargs = {
         key: (batch[key].to(device) if batch[key] is not None else None)
@@ -307,7 +223,7 @@ def gen(
         if key in batch
     }
     with torch.no_grad():
-        pts = sampler(model, X, y, gap_pid, energy, 1000, 500)
+        pts = RF_sampler(model, X, y, gap_pid, energy, 1000, 500)
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
         plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
     

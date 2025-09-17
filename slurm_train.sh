@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=genai_omnilearn_fine_tune
+#SBATCH --job-name=genai_calolearn
 #SBATCH --nodes=1
-#SBATCH --time=04:00:00
+#SBATCH --time=10:00:00
 #SBATCH --constraint=gpu
 #SBATCH --gpus=4
 #SBATCH --qos=regular
@@ -14,4 +14,4 @@
 module load conda
 conda activate omnilearned
 module load pytorch
-srun python scripts/train.py --num_classes 2
+srun python scripts/train_omnilearn.py --num_classes 2
