@@ -49,16 +49,18 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 # --- General/Output Arguments ---
     
-    # parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
+    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
+                          help="Base path to the dataset directory.")
+    
+    # parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test/",
     #                      help="Base path to the dataset directory.")
     
-    parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test/",
-                         help="Base path to the dataset directory.")
-    
-    # parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
-    #                       help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
-                        help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
+                           help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
+                           help="Output directory for logs, checkpoints, and results.")
+    # parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
+    #                     help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="detector_cats",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
@@ -157,51 +159,6 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
-def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud"):
-    """
-    Plots each individual point cloud from a batch in a separate 3D scatter plot.
-
-    Args:
-        batch_of_point_clouds: A PyTorch tensor of shape (B, N, 3), where:
-            - B is the batch size (e.g., 128)
-            - N is the number of points (e.g., 2048)
-            - 3 represents the (x, y, z) coordinates
-    """
-    # Get the batch size
-    batch_size = batch_of_point_clouds.shape[0]
-    # Loop through each point cloud in the batch
-    for i in range(10):
-    #for i in range(num_samples):
-        # Extract the current point cloud tensor
-        # .detach() is used to remove it from the computation graph.
-        # .cpu() ensures the tensor is on the CPU.
-        # .numpy() converts the tensor to a NumPy array, which matplotlib requires.
-        point_cloud = batch_of_point_clouds[i].detach().cpu().numpy()
-        category = int(cates[i].detach().cpu().numpy())
-        gap = int(gaps[i].detach().cpu().numpy())
-        energy = energies[i].detach().cpu().numpy()
-        # Separate the coordinates for plotting
-        x = point_cloud[:, 0]
-        y = point_cloud[:, 1]
-        z = point_cloud[:, 2]
-
-        # Create a new figure and a 3D subplot for the current point cloud
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot the points
-        ax.scatter(x, y, z, s=1)  # s is the marker size
-
-        # Set axis labels and a title
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        ax.set_title(f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy}')
-        
-        # Display the plot
-        plt.savefig(f"results/gen_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
-        plt.close()
-
 def train_rectified_flow(rectified_flow, 
                          dataloader, 
                          optimizer, 
@@ -248,6 +205,31 @@ def train_rectified_flow(rectified_flow,
 
     return rectified_flow, loss_curve
 
+
+def save_checkpoint(
+    model, epoch, optimizer, checkpoint_dir, checkpoint_name, #lr_scheduler, loss,
+):
+    save_dict = {
+        "body": model.module.body.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "epoch": epoch,
+        #"loss": loss,
+        #"sched": lr_scheduler.state_dict(),
+    }
+
+    if model.module.classifier is not None:
+        save_dict["classifier_head"] = model.module.classifier.state_dict()
+
+    if model.module.generator is not None:
+        save_dict["generator_head"] = model.module.generator.state_dict()
+
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+
+    torch.save(save_dict, os.path.join(checkpoint_dir, checkpoint_name))
+    print(
+        f"Epoch {epoch} | Training checkpoint saved at {os.path.join(checkpoint_dir, checkpoint_name)}"
+    )
 
 
 def restore_checkpoint(
@@ -345,8 +327,9 @@ def main(args):
     train_dataset, val_dataset, test_dataset = random_split(
         dataset, [num_train, num_val, num_test]
     )
+    print(f"  Train set: {len(train_dataset)} events")
     print(f"  Validation set: {len(val_dataset)} events")
-
+    
 
     # Create DataLoaders for each subset
     batch_size = args.batch
@@ -395,7 +378,7 @@ def main(args):
     # iterations = 10000
     # batchsize = 2048
     # input_dim = 2
-    iterations = 100
+    iterations = 1000
     
     rectified_flow_1 = RectifiedFlow(model=model, num_steps=100)
     optimizer = torch.optim.Adam(rectified_flow_1.model.parameters(), lr=1e-4)
@@ -405,13 +388,20 @@ def main(args):
     title = f'Training Loss Curve'
     plt.title(title)
     #plt.savefig(f"results/gen_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
-    plt.savefig(f"results/gen_{i}_{title}.png")
+    plt.savefig(f"results/gen_{title}.png")
     plt.close()
-
     
+    #traj = rectified_flow_1.sample_ode(z0=z0, N=N)
+    save_checkpoint(
+                model,
+                269, #TODO what to use after RF?
+                optimizer,
+                args.outdir,
+                get_checkpoint_name(f"{args.save_tag}_RF"),
+            )
 
     dist.destroy_process_group()
-
+    
 
 if __name__ == "__main__":
     args = parse_arguments()

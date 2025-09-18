@@ -48,16 +48,16 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 # --- General/Output Arguments ---
         
-    # parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
-    #                      help="Base path to the dataset directory.")
-    
-    parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test/",
+    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
                          help="Base path to the dataset directory.")
     
-    # parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
-    #                       help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
-                        help="Output directory for logs, checkpoints, and results.")
+    # parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test/",
+    #                      help="Base path to the dataset directory.")
+    
+    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
+                          help="Output directory for logs, checkpoints, and results.")
+    # parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
+    #                     help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="detector_cats",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
@@ -328,6 +328,7 @@ def restore_checkpoint(
     checkpoint = torch.load(
         os.path.join(checkpoint_dir, checkpoint_name),
         map_location=device,
+        weights_only=False,  # Added to avoid issues with optimizer state dict (new in PyTorch 2.0
     )
 
     base_model = model.module if hasattr(model, "module") else model
