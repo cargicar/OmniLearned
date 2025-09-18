@@ -109,7 +109,7 @@ def DDIM_sampler(model, X, y, gap, energy, num_steps= 1000, num_points= 500, dev
         
         return pred_x
 
-def RF_sampler(model, X, y, gap, energy, num_steps= 100, num_points= 500, device = "cuda", cond=None, pid=None, add_info=None):
+def RF_sampler(model, X, y, gap, energy, num_steps= 1000, num_points= 500, device = "cuda", cond=None, pid=None, add_info=None):
     """
     Samples a clean point cloud from random Gaussian noise.
 

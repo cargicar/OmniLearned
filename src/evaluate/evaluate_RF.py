@@ -223,7 +223,7 @@ def gen(
         if key in batch
     }
     with torch.no_grad():
-        pts = RF_sampler(model, X, y, gap_pid, energy, 1000, 500)
+        pts = RF_sampler(model, X, y, gap_pid, energy, 10, 500)
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
         plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
     

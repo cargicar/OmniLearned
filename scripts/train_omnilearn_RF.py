@@ -1,9 +1,11 @@
+
 import rootutils
 import json
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
+from rectified_flow.rectified_flow import RectifiedFlow
 
 rootutils.setup_root(__file__, pythonpath=True)
 
@@ -17,7 +19,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from diffusers.optimization import get_cosine_schedule_with_warmup
 
 from src.models.omnilearnedv2 import PET3
-#from src.models.calolearned import PET3
+from src.models.omnilearned import PET2
 from src.diffusion.edm import EDM
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
 
@@ -48,19 +50,19 @@ def parse_arguments():
     
     parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
                          help="Base path to the dataset directory.")
-
+    
     #parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets/G4_h5/all_sims_combined.h5",
     #                     help="Base path to the dataset directory.")
     parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
                           help="Output directory for logs, checkpoints, and results.")
     #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                    help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="edm",
+    parser.add_argument("--save_tag", type=str, default="detector_cats_RF",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
-    parser.add_argument("--dataset", type=str, default="G4_pkl",
-                        help="Name of the dataset to use (e.g., 'G4_pkl').")
+    parser.add_argument("--dataset", type=str, default="G4",
+                        help="Name of the dataset to use (e.g., 'G4').")
     parser.add_argument("--wandb", action="store_true", # Use store_true for boolean flags
                         help="Enable Weights & Biases logging.")
    
@@ -172,6 +174,20 @@ def train_step(
     use_amp=False,
     gscaler=None,
 ):
+    #FIXME hardcoded
+    data_shape = (500,4)
+    # Initialize RectifiedFlow with custom settings
+    rectified_flow = RectifiedFlow(
+        data_shape= data_shape,#(32, 32),
+        velocity_field=model,
+        interp="straight",
+        source_distribution="normal",
+        # is_independent_coupling=True,
+        # train_time_distribution="uniform",
+        # train_time_weight="uniform",
+        criterion="mse",
+        device=device,
+    )
     model.train()
 
     logs_buff = torch.zeros((7), dtype=torch.float32, device=device)
@@ -202,9 +218,7 @@ def train_step(
         #y = torch.argmax(y, dim=1)
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
-        #FIXME for two classes only. Testing.
         y = (y == 2).long()
-        x_conds = (y, gap_pid, energy)
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -214,10 +228,82 @@ def train_step(
             "cuda:{}".format(device) if torch.cuda.is_available() else "cpu",
             enabled=use_amp,
         ):
-            #outputs = model(X, y, gap_pid, energy, **model_kwargs)
-            loss_gen = model(X, x_conds, **model_kwargs)
-            logs["loss_gen"] += loss_gen.detach()
+            outputs = model(X, y, gap_pid, energy, **model_kwargs)
+            loss = 0
             
+            if outputs["y_pred"] is not None:
+                if use_event_loss:
+                    event_mask = y >= 200
+                    if event_mask.any():
+                        loss_event = class_cost(
+                            outputs["y_pred"][event_mask][:, 200:], y[event_mask] - 200
+                        ).mean()
+                        logs["loss_class_event"] += loss_event.detach()
+                        loss = loss + loss_event
+                    if (~event_mask).any():
+                        loss_class = class_cost(
+                            outputs["y_pred"][~event_mask][:, :200], y[~event_mask]
+                        ).mean()
+                        logs["loss_class"] += loss_class.detach()
+                        loss = loss + loss_class
+                else:
+                    
+                    loss_class = class_cost(outputs["y_pred"], y).mean()
+                    #FIXME for G4 use
+                    #y_int = torch.argmax(y, dim=1)
+                    #loss_class = class_cost(outputs["y_pred"], y_int).mean()
+                    loss = loss + loss_class
+                    logs["loss_class"] += loss_class.detach()
+            if outputs["z_pred"] is not None:
+                x_0 = rectified_flow.sample_source_distribution(X.shape[0])
+                t = rectified_flow.sample_train_time(X.shape[0])
+
+                loss = rectified_flow.get_loss(
+                    x_0=x_0,
+                    x_1=X,
+                    t=t,
+                )
+
+                nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
+                # loss_gen = (
+                #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
+                # )
+                # loss_gen = loss_gen.mean()
+                # loss = loss + loss_gen
+                logs["loss_gen"] += loss.detach()
+            if outputs["y_perturb"] is not None:
+                if use_event_loss:
+                    event_mask = y >= 200
+                    if event_mask.any():
+                        loss_event = torch.mean(
+                            outputs["alpha"][event_mask].squeeze(1)
+                            * class_cost(
+                                outputs["y_perturb"][event_mask][:, 200:],
+                                y[event_mask] - 200,
+                            )
+                        )
+                        logs["loss_event_perturb"] += loss_event.detach()
+                        loss = loss + loss_event
+
+                    if (~event_mask).any():
+                        loss_class = torch.mean(
+                            outputs["alpha"][~event_mask].squeeze(1)
+                            * class_cost(
+                                outputs["y_perturb"][~event_mask][:, :200],
+                                y[~event_mask],
+                            )
+                        )
+                        logs["loss_perturb"] += loss_class.detach()
+                        loss = loss + loss_class
+
+                else:
+                    loss_perturb = torch.mean(
+                        outputs["alpha"].squeeze(1)
+                        * class_cost(outputs["y_perturb"], y)
+                    )
+                    loss = loss + loss_perturb
+                    logs["loss_perturb"] += loss_perturb.detach()
+
             if (
                 use_clip
                 and outputs["z_body"] is not None
@@ -231,6 +317,7 @@ def train_step(
                 loss = loss + loss_clip
                 logs["loss_clip"] += loss_clip.detach()
 
+        logs["loss"] += loss.detach()
         if use_amp and gscaler is not None:
             gscaler.scale(loss).backward()
             gscaler.unscale_(optimizer)
@@ -238,7 +325,7 @@ def train_step(
             gscaler.step(optimizer)
             gscaler.update()
         else:
-            loss_gen.backward()  # Backward pass
+            loss.backward()  # Backward pass
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()  # Update parameters
         scheduler.step()
@@ -294,7 +381,6 @@ def test_step(
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
         y = (y == 2).long()
-        x_conds = (y, gap_pid, energy)
         model_kwargs = {
             key: (batch[key].to(device) if batch[key] is not None else None)
             for key in ["cond", "pid", "add_info"]
@@ -302,17 +388,81 @@ def test_step(
         }
         try:
             with torch.no_grad():
-                #outputs = model(X, y, gap_pid, energy, **model_kwargs)
-                loss_gen = model(X, x_conds, **model_kwargs)
+                outputs = model(X, y, gap_pid, energy, **model_kwargs)
         except Exception as e:
             print(f"batch_idx [{batch_idx}] skiped: Exception during model inference: {e}")
             continue
-        loss = 0            
-        logs["loss_gen"] += loss_gen.detach()
-        
-        
+        loss = 0
+
+        if outputs["y_pred"] is not None:
+            if use_event_loss:
+                event_mask = y >= 200
+                if event_mask.any():
+                    loss_event = class_cost(
+                        outputs["y_pred"][event_mask][:, 200:], y[event_mask] - 200
+                    ).mean()
+                    logs["loss_class_event"] += loss_event.detach()
+                    loss = loss + loss_event
+                if (~event_mask).any():
+                    loss_class = class_cost(
+                        outputs["y_pred"][~event_mask][:, :200], y[~event_mask]
+                    ).mean()
+                    logs["loss_class"] += loss_class.detach()
+                    loss = loss + loss_class
+            else:
+                loss_class = class_cost(outputs["y_pred"], y).mean()
+                #FIXME
+                #y_int_labels = torch.argmax(y, dim=1)
+                #loss_class = class_cost(outputs["y_pred"], y_int_labels).mean()
+                loss = loss + loss_class
+                logs["loss_class"] += loss_class.detach()
+        if outputs["z_pred"] is not None:
+            nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
+            loss_gen = gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
+            loss_gen = loss_gen.mean()
+            loss = loss + loss_gen
+            logs["loss_gen"] += loss_gen.detach()
+        if outputs["y_perturb"] is not None:
+            if use_event_loss:
+                event_mask = y >= 200
+                if event_mask.any():
+                    loss_event = torch.mean(
+                        outputs["alpha"][event_mask].squeeze(1)
+                        * class_cost(
+                            outputs["y_perturb"][event_mask][:, 200:],
+                            y[event_mask] - 200,
+                        )
+                    )
+                    logs["loss_event_perturb"] += loss_event.detach()
+                    loss = loss + loss_event
+                if (~event_mask).any():
+                    loss_class = torch.mean(
+                        outputs["alpha"][~event_mask].squeeze(1)
+                        * class_cost(
+                            outputs["y_perturb"][~event_mask][:, :200], y[~event_mask]
+                        )
+                    )
+                    logs["loss_perturb"] += loss_class.detach()
+                    loss = loss + loss_class
+
+            else:
+                loss_perturb = torch.mean(
+                    outputs["alpha"].squeeze(1) * class_cost(outputs["y_perturb"], y)
+                )
+                loss = loss + loss_perturb
+                logs["loss_perturb"] += loss_perturb.detach()
+
+        if use_clip and outputs["z_body"] is not None and outputs["x_body"] is not None:
+            loss_clip = clip_loss(
+                outputs["x_body"].view(X.shape[0], -1),
+                outputs["z_body"].view(X.shape[0], -1),
+                weight=outputs["alpha"],
+            )
+            loss = loss + loss_clip
+            logs["loss_clip"] += loss_clip.detach()
+
         #print(f"################3 loss {loss.detach()}")
-        logs["loss"] += loss_gen.detach()
+        logs["loss"] += loss.detach()
 
     if dist.is_initialized():
         for key in logs:
@@ -454,21 +604,21 @@ def save_checkpoint(
     model, epoch, optimizer, loss, lr_scheduler, checkpoint_dir, checkpoint_name
 ):
     save_dict = {
-        "state_dict": model.state_dict(),
+        "body": model.module.body.state_dict(),
         "optimizer": optimizer.state_dict(),
         "epoch": epoch,
         "loss": loss,
         "sched": lr_scheduler.state_dict(),
     }
 
-    # if model.module.classifier is not None:
-    #     save_dict["classifier_head"] = model.module.classifier.state_dict()
+    if model.module.classifier is not None:
+        save_dict["classifier_head"] = model.module.classifier.state_dict()
 
-    # if model.module.generator is not None:
-    #     save_dict["generator_head"] = model.module.generator.state_dict()
+    if model.module.generator is not None:
+        save_dict["generator_head"] = model.module.generator.state_dict()
 
-    # if not os.path.exists(checkpoint_dir):
-    #     os.makedirs(checkpoint_dir)
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
 
     torch.save(save_dict, os.path.join(checkpoint_dir, checkpoint_name))
     print(
@@ -492,12 +642,58 @@ def restore_checkpoint(
         map_location=device,
     )
 
-    model = model.module if hasattr(model, "module") else model
-    model.to(device)
-    model.load_state_dict(checkpoint["state_dict"], strict=False)
-    lr_scheduler.load_state_dict(checkpoint["sched"])
-    startEpoch = checkpoint["epoch"] + 1
-    best_loss = checkpoint["loss"]
+    base_model = model.module if hasattr(model, "module") else model
+    base_model.to(device)
+    base_model.body.load_state_dict(checkpoint["body"], strict=False)
+
+    if not fine_tune:
+        if base_model.classifier is not None and "classifier_head" in checkpoint:
+            base_model.classifier.load_state_dict(
+                checkpoint["classifier_head"], strict=False
+            )
+
+        if base_model.generator is not None:
+            base_model.generator.load_state_dict(
+                checkpoint["generator_head"], strict=False
+            )
+
+        lr_scheduler.load_state_dict(checkpoint["sched"])
+        startEpoch = checkpoint["epoch"] + 1
+        best_loss = checkpoint["loss"]
+    else:
+        if base_model.classifier is not None and "classifier_head" in checkpoint:
+            classifier_state = checkpoint["classifier_head"]
+            model_state = base_model.classifier.state_dict()
+            filtered_state = {}
+            for k, v in classifier_state.items():
+                if k in model_state and model_state[k].shape == v.shape:
+                    filtered_state[k] = v
+                else:
+                    if is_main_node:
+                        print(
+                            f"Skipping {k}: shape mismatch (checkpoint: {v.shape}, model: {model_state[k].shape if k in model_state else 'missing'})"
+                        )
+
+            base_model.classifier.load_state_dict(filtered_state, strict=False)
+
+        if base_model.generator is not None:
+            classifier_state = checkpoint["generator_head"]
+            model_state = base_model.generator.state_dict()
+            filtered_state = {}
+            for k, v in classifier_state.items():
+                if k in model_state and model_state[k].shape == v.shape:
+                    filtered_state[k] = v
+                else:
+                    if is_main_node:
+                        print(
+                            f"Skipping {k}: shape mismatch (checkpoint: {v.shape}, model: {model_state[k].shape if k in model_state else 'missing'})"
+                        )
+
+            base_model.generator.load_state_dict(filtered_state, strict=False)
+
+        startEpoch = 0.0
+        best_loss = np.inf
+
     try:
         optimizer.load_state_dict(checkpoint["optimizer"])
     except Exception:
@@ -510,7 +706,7 @@ def restore_checkpoint(
 def main(args):
     local_rank, rank, size = ddp_setup()
     # set up model
-    pet3 = PET3(
+    model = PET2(
         input_dim=args.num_feat,
         hidden_size=args.base_dim,
         num_transformers=args.num_transf,
@@ -533,16 +729,6 @@ def main(args):
         num_classes=args.num_classes,
         num_gap_classes=args.num_gap_classes,
     )
-
-    model = EDM(model=pet3,
-            #     num_timesteps=40,
-            #     sigma_min=0.002,  # min noise level
-            #     sigma_max=80,  # max noise level
-            #     sigma_data=0.5,  # standard deviation of data distribution
-            #     rho=7,  # controls the sampling schedule
-            #     P_mean=-1.2,  # mean of log-normal distribution from which noise is drawn for training
-            #     P_std=1.2,  # standard deviation of log-normal distribution from which noise is drawn for training
-            )
     if rank == 0:
         d = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         print("**** Setup ****")
@@ -552,7 +738,7 @@ def main(args):
         )
         print(f"Training on device: {d}, with {size} GPUs")
         print("************")
-    
+
     # load in train data
     # train_loader = load_data(
     #     args.dataset,
@@ -586,7 +772,7 @@ def main(args):
     #     size=size,
     # )
     #TODO unify for all datasets,. Better make a class that load the dataset and split it
-    if args.dataset == "G4_pkl":#pkl
+    if args.dataset == "G4":#pkl
         pkl_files_path = args.path
         dataset = PklDataset(pkl_files_path)
     elif args.dataset == "G4_h5":#h5
@@ -631,10 +817,9 @@ def main(args):
         print(f"Train dataset len: {len(train_loader)}")
         print("************")
 
-    #TODO re-enable this 
-    # param_groups = get_param_groups(
-    #     model, args.wd, args.lr, lr_factor=args.lr_factor, fine_tune=args.fine_tune
-    # )
+    param_groups = get_param_groups(
+        model, args.wd, args.lr, lr_factor=args.lr_factor, fine_tune=args.fine_tune
+    )
 
     if args.optim not in ["adamw", "lion"]:
         raise ValueError(
@@ -644,14 +829,8 @@ def main(args):
     # if args.optim == "lion":
     #     optimizer = Lion(param_groups, betas=(args.b1, args.b2))
     # if args.optim == "adam":
-    #optimizer = torch.optim.AdamW(param_groups)
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=args.lr,
-        betas=(0.9, 0.999),
-        eps=1e-8,
-        weight_decay=args.wd # Add your desired weight decay here
-        )
+    optimizer = torch.optim.AdamW(param_groups)
+
     train_steps = len(train_loader) if args.iterations < 0 else args.iterations
 
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
