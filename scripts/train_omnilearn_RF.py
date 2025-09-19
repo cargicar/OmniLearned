@@ -20,7 +20,7 @@ from diffusers.optimization import get_cosine_schedule_with_warmup
 
 from src.models.omnilearnedv2 import PET3
 from src.models.omnilearned import PET2
-from src.diffusion.edm import EDM
+#from src.diffusion.edm import EDM
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
 
 from scripts.utils import (
@@ -48,15 +48,15 @@ def parse_arguments():
 
     # --- General/Output Arguments ---
     
-    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
-                         help="Base path to the dataset directory.")
+    # parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
+    #                      help="Base path to the dataset directory.")
     
-    #parser.add_argument("--path", type=str, default="/pscratch/sd/c/ccardona/datasets/G4_h5/all_sims_combined.h5",
-    #                     help="Base path to the dataset directory.")
-    parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
-                          help="Output directory for logs, checkpoints, and results.")
-    #parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
-    #                    help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test",
+                        help="Base path to the dataset directory.")
+    # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
+    #                       help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
+                       help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="detector_cats_RF",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
@@ -283,6 +283,9 @@ def train_step(
                     x_0=x_0,
                     x_1=X,
                     t=t,
+                    y=y, 
+                    gap=gap_pid,
+                    energy= energy,
                 )
 
                 nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
