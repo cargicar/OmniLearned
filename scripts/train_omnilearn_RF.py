@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
-from rectified_flow.rectified_flow import RectifiedFlow, AffineInterp
+from rectified_flow.rectified_flow import RectifiedFlow 
+from rectified_flow.flow_components.interpolation_solver import AffineInterp
 
 rootutils.setup_root(__file__, pythonpath=True)
 
@@ -51,13 +52,13 @@ def parse_arguments():
     # parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
     #                      help="Base path to the dataset directory.")
     
-    parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test",
+    parser.add_argument("--path", type=str, default="/data/G4_individual_sims_pkl_test",
                         help="Base path to the dataset directory.")
     # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
     #                       help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
+    parser.add_argument("--outdir", type=str, default="/home/cardona/saved_models",
                        help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="detector_cats_RF",
+    parser.add_argument("--save_tag", type=str, default="detector_cats",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
@@ -246,88 +247,31 @@ def train_step(
             "cuda:{}".format(device) if torch.cuda.is_available() else "cpu",
             enabled=use_amp,
         ):
-            outputs = model(X, y, gap_pid, energy, **model_kwargs)
+            #outputs = model(X, y, gap_pid, energy, **model_kwargs)
             loss = 0
-            
-            if outputs["y_pred"] is not None:
-                if use_event_loss:
-                    event_mask = y >= 200
-                    if event_mask.any():
-                        loss_event = class_cost(
-                            outputs["y_pred"][event_mask][:, 200:], y[event_mask] - 200
-                        ).mean()
-                        logs["loss_class_event"] += loss_event.detach()
-                        loss = loss + loss_event
-                    if (~event_mask).any():
-                        loss_class = class_cost(
-                            outputs["y_pred"][~event_mask][:, :200], y[~event_mask]
-                        ).mean()
-                        logs["loss_class"] += loss_class.detach()
-                        loss = loss + loss_class
-                else:
-                    
-                    loss_class = class_cost(outputs["y_pred"], y).mean()
-                    #FIXME for G4 use
-                    #y_int = torch.argmax(y, dim=1)
-                    #loss_class = class_cost(outputs["y_pred"], y_int).mean()
-                    loss = loss + loss_class
-                    logs["loss_class"] += loss_class.detach()
-            if outputs["z_pred"] is not None:
-                t = outputs["time"]
-                
-                #x_t, dot_x_t = interp.forward(x_0, x_1, t)
-                x_0 = rectified_flow.sample_source_distribution(X.shape[0])
-                #t = rectified_flow.sample_train_time(X.shape[0])
+            time = torch.rand(size=(X.shape[0],)).to(X.device)
+            #t = outputs["time"]
+            #x_t, dot_x_t = interp.forward(x_0, x_1, t)
+            x_0 = rectified_flow.sample_source_distribution(X.shape[0])
+            #t = rectified_flow.sample_train_time(X.shape[0])
 
-                loss = rectified_flow.get_loss(
-                    x_0=x_0,
-                    x_1=X,
-                    t=t,
-                    y=y, 
-                    gap=gap_pid,
-                    energy= energy,
+            loss = rectified_flow.get_loss(
+                x_0=x_0,
+                x_1=X,
+                y= y,
+                gap= gap_pid,
+                energy=energy,
+                t=time,
                 )
 
-                nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
-                # loss_gen = (
-                #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
-                # )
-                # loss_gen = loss_gen.mean()
-                # loss = loss + loss_gen
-                logs["loss_gen"] += loss.detach()
-            if outputs["y_perturb"] is not None:
-                if use_event_loss:
-                    event_mask = y >= 200
-                    if event_mask.any():
-                        loss_event = torch.mean(
-                            outputs["alpha"][event_mask].squeeze(1)
-                            * class_cost(
-                                outputs["y_perturb"][event_mask][:, 200:],
-                                y[event_mask] - 200,
-                            )
-                        )
-                        logs["loss_event_perturb"] += loss_event.detach()
-                        loss = loss + loss_event
-
-                    if (~event_mask).any():
-                        loss_class = torch.mean(
-                            outputs["alpha"][~event_mask].squeeze(1)
-                            * class_cost(
-                                outputs["y_perturb"][~event_mask][:, :200],
-                                y[~event_mask],
-                            )
-                        )
-                        logs["loss_perturb"] += loss_class.detach()
-                        loss = loss + loss_class
-
-                else:
-                    loss_perturb = torch.mean(
-                        outputs["alpha"].squeeze(1)
-                        * class_cost(outputs["y_perturb"], y)
-                    )
-                    loss = loss + loss_perturb
-                    logs["loss_perturb"] += loss_perturb.detach()
-
+            #nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
+            # loss_gen = (
+            #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
+            # )
+            # loss_gen = loss_gen.mean()
+            # loss = loss + loss_gen
+            logs["loss_gen"] += loss.detach()
+        
             if (
                 use_clip
                 and outputs["z_body"] is not None
