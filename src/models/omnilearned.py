@@ -149,7 +149,9 @@ class PET2(nn.Module):
             "v": v,
             "x_body": x_body,
             "z_body": z_body,
-            "alpha": alpha**2,
+            "alpha": alpha,
+            "sigma": sigma,
+            "time": time,
         }
 #TODO add y, gap, energy to the classifier forward function
 class PET_classifier(nn.Module):

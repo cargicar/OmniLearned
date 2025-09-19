@@ -84,6 +84,7 @@ def DDIM_sampler(model, X, y, gap, energy, num_steps= 1000, num_points= 500, dev
             #v = model(x, t, cond)
             # Predict the velocity
             # The model's body takes the noisy data and conditions
+            # TODO, I can read the whole batch here, and pass the whole model instead of fraction it in body and generator
             z_body = model.body(x, cond, pid, add_info, t)
             # The generator predicts the velocity
             z_pred_v = model.generator(z_body, y, gap, energy)

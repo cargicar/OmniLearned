@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
-from rectified_flow.rectified_flow import RectifiedFlow
+from rectified_flow.rectified_flow import RectifiedFlow, AffineInterp
 
 rootutils.setup_root(__file__, pythonpath=True)
 
@@ -173,14 +173,32 @@ def train_step(
     iterations_per_epoch=-1,
     use_amp=False,
     gscaler=None,
-):
+):  
+    
+
+    # TODO take this from diffusion_utils. (maybe wrihte them as lambda funciton there ?) 
+    # Pre-compute parameters for the cosine log SNR schedule
+    logsnr_min = -20.0
+    logsnr_max = 20.0
+    shift = 1.0
+
+    # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
+    b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
+    a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
+
+    # This lambda functions computes the alpha, sigma value based on the cosine schedule.
+    # As far as I can tell, this is the format requiere for AffineInterp
+    logsnr_schedule_lambda = lambda t: -2.0 * torch.log(torch.tan(a * t + b) * shift)
+    alpha_function = lambda t: torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
+    sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
+
     #FIXME hardcoded
     data_shape = (500,4)
     # Initialize RectifiedFlow with custom settings
     rectified_flow = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        interp="straight",
+        interp = AffineInterp(alpha=alpha_function, beta=sigma_function),
         source_distribution="normal",
         # is_independent_coupling=True,
         # train_time_distribution="uniform",
@@ -255,8 +273,11 @@ def train_step(
                     loss = loss + loss_class
                     logs["loss_class"] += loss_class.detach()
             if outputs["z_pred"] is not None:
+                t = outputs["time"]
+                
+                #x_t, dot_x_t = interp.forward(x_0, x_1, t)
                 x_0 = rectified_flow.sample_source_distribution(X.shape[0])
-                t = rectified_flow.sample_train_time(X.shape[0])
+                #t = rectified_flow.sample_train_time(X.shape[0])
 
                 loss = rectified_flow.get_loss(
                     x_0=x_0,
