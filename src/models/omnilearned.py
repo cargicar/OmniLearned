@@ -368,7 +368,6 @@ class PET_generator(nn.Module):
             
             for ib, blk in enumerate(self.in_blocks):
                 x = blk(x, mask=mask)
-
             # Adjust the slicing to account for the three added tokens
             x = (
                 self.fc(x[:, self.num_add + self.num_tokens + 3 :]) 

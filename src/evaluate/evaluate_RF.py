@@ -7,6 +7,11 @@ from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
 import torch.nn.functional as F
 
+from rectified_flow.rectified_flow import RectifiedFlow 
+from rectified_flow.samplers.base_sampler import Sampler
+from rectified_flow.flow_components.interpolation_solver import AffineInterp
+from rectified_flow.utils import visualize_2d_trajectories_plotly, set_seed
+
 rootutils.setup_root(__file__, pythonpath=True)
 #from src.models.omnilearnedv2 import PET3
 from src.models.omnilearned import PET2
@@ -48,18 +53,17 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 # --- General/Output Arguments ---
-    
-    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
-                         help="Base path to the dataset directory.")
-    
-    # parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test/",
+     
+    # parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
     #                      help="Base path to the dataset directory.")
     
-    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
-                          help="Output directory for logs, checkpoints, and results.")
-    # parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
-    #                     help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="detector_cats_RF",
+    parser.add_argument("--path", type=str, default="/data/ccardona/datasets/G4_individual_sims_pkl_test",
+                        help="Base path to the dataset directory.")
+    # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
+    #                       help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--indir", type=str, default="/data/ccardona/models/G4",
+                       help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--save_tag", type=str, default="detector_cats",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
@@ -202,11 +206,55 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
         plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
         plt.close()
 
+class MyEulerSampler(Sampler):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def step(self, **model_kwargs):
+        # Extract the current time, next time point, and current state
+        t, t_next, x_t = self.t, self.t_next, self.x_t
+        # Compute the velocity field at the current state and time
+        v_t = self.rectified_flow.get_velocity(x_t=x_t, t=t, **model_kwargs)
+        
+        # Update the state using the Euler formula
+        self.x_t = x_t + (t_next - t) * v_t
+
 def gen(
     model,
     dataloader,
     device="cuda" if torch.cuda.is_available() else "cpu",
 ):
+    logsnr_min = -20.0
+    logsnr_max = 20.0
+    shift = 1.0
+
+    # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
+    b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
+    a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
+
+    # This lambda functions computes the alpha, sigma value based on the cosine schedule.
+    # As far as I can tell, this is the format requiere for AffineInterp
+    logsnr_schedule_lambda = lambda t: -2.0 * torch.log(torch.tan(a * t + b) * shift)
+    alpha_function = lambda t: torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
+    sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
+
+    #FIXME hardcoded
+    data_shape = (500,4)
+    
+    
+    straight_rf = RectifiedFlow(
+        data_shape= data_shape,#(32, 32),
+        velocity_field=model,
+        interp = AffineInterp(alpha=alpha_function, beta=sigma_function),
+        source_distribution="normal",
+        # is_independent_coupling=True,
+        # train_time_distribution="uniform",
+        # train_time_weight="uniform",
+        criterion="mse",
+        device=device,
+    )
+
+  
     model.eval()
     pts = []
     iterdata = iter(dataloader)
@@ -222,9 +270,36 @@ def gen(
         for key in ["cond", "pid", "add_info"]
         if key in batch
     }
-    with torch.no_grad():
-        pts = RF_sampler(model, X, y, gap_pid, energy, 10, 500)
+    with torch.no_grad():                 
+        euler_sampler = MyEulerSampler(
+            rectified_flow=straight_rf,
+            num_steps=100,
+            num_samples=10,
+        )
+
+        # Sample method 1)
+        # Will use the default num_steps and num_samples previously set in the Sampler class
+        traj1 = euler_sampler.sample_loop(
+            seed=233,
+            y=y,
+            gap= gap_pid,
+            energy=energy,
+            )
+            
+        # Sample method 2)
+        # We can pass in a custom x_0 to sample from
+        set_seed(233)
+#        x_0 = straight_rf.sample_source_distribution(batch_size=args.batch)
+#        traj2 = euler_sampler.sample_loop(x_0=x_0)
+
+        # Sample method 3)
+        # If we pass in num_steps and num_samples, it will override the default values
+        #traj3 = euler_sampler.sample_loop(seed=233, num_steps=50, num_samples=10)
+
+        
+        #pts = RF_sampler(model, X, y, gap_pid, energy, 10, 500)
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
+        pts= traj1.x_t
         plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
     
     # return (
