@@ -35,7 +35,7 @@ from src.data.dataset import ShapeNetCore
 
 import argparse
 import os # Import os for default path if needed
-
+#TODO enable DDP
 
 
 def parse_arguments():
@@ -47,15 +47,16 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description="Run model training with specified configurations.")
 # --- General/Output Arguments ---
-        
-    parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
-                         help="Base path to the dataset directory.")
-    
-    # parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test/",
+    # parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
     #                      help="Base path to the dataset directory.")
     
-    parser.add_argument("--indir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
-                          help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--path", type=str, default="/data/ccardona/datasets/G4_individual_sims_pkl_test",
+                        help="Base path to the dataset directory.")
+    # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
+    #                       help="Output directory for logs, checkpoints, and results.")
+    parser.add_argument("--indir", type=str, default="/data/ccardona/models/G4",
+                       help="Output directory for logs, checkpoints, and results.")
+    
     # parser.add_argument("--indir", type=str, default="/home/carlos/Rnet_local/saved_models",
     #                     help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--save_tag", type=str, default="detector_cats",

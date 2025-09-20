@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
-from rectified_flow.rectified_flow import RectifiedFlow, AffineInterp
+from rectified_flow.rectified_flow import RectifiedFlow 
+from rectified_flow.flow_components.interpolation_solver import AffineInterp
 
 rootutils.setup_root(__file__, pythonpath=True)
 
@@ -28,8 +29,7 @@ from scripts.utils import (
     ddp_setup,
     get_param_groups,
     CLIPLoss,
-    get_checkpoint_name,
-)
+    get_checkpoint_name,)
 import time
 import os
 import torch.amp as amp
@@ -51,13 +51,13 @@ def parse_arguments():
     # parser.add_argument("--path", type=str, default='/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test',
     #                      help="Base path to the dataset directory.")
     
-    parser.add_argument("--path", type=str, default="/home/carlos/Rnet_local/datasets/G4_individual_sims_pkl_test",
+    parser.add_argument("--path", type=str, default="/data/ccardona/datasets/G4_individual_sims_pkl_test",
                         help="Base path to the dataset directory.")
     # parser.add_argument("--outdir", type=str, default="/pscratch/sd/c/ccardona/models/G4/",
     #                       help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--outdir", type=str, default="/home/carlos/Rnet_local/saved_models",
+    parser.add_argument("--outdir", type=str, default="/data/ccardona/models/G4",
                        help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="detector_cats_RF",
+    parser.add_argument("--save_tag", type=str, default="detector_cats",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
@@ -221,7 +221,7 @@ def train_step(
     if iterations_per_epoch < 0:
         iterations_per_epoch = len(dataloader)
     data_iter = iter(dataloader)
-
+    
     for batch_idx in range(iterations_per_epoch):
         try:
             batch = next(data_iter)
@@ -246,88 +246,23 @@ def train_step(
             "cuda:{}".format(device) if torch.cuda.is_available() else "cpu",
             enabled=use_amp,
         ):
-            outputs = model(X, y, gap_pid, energy, **model_kwargs)
-            loss = 0
-            
-            if outputs["y_pred"] is not None:
-                if use_event_loss:
-                    event_mask = y >= 200
-                    if event_mask.any():
-                        loss_event = class_cost(
-                            outputs["y_pred"][event_mask][:, 200:], y[event_mask] - 200
-                        ).mean()
-                        logs["loss_class_event"] += loss_event.detach()
-                        loss = loss + loss_event
-                    if (~event_mask).any():
-                        loss_class = class_cost(
-                            outputs["y_pred"][~event_mask][:, :200], y[~event_mask]
-                        ).mean()
-                        logs["loss_class"] += loss_class.detach()
-                        loss = loss + loss_class
-                else:
-                    
-                    loss_class = class_cost(outputs["y_pred"], y).mean()
-                    #FIXME for G4 use
-                    #y_int = torch.argmax(y, dim=1)
-                    #loss_class = class_cost(outputs["y_pred"], y_int).mean()
-                    loss = loss + loss_class
-                    logs["loss_class"] += loss_class.detach()
-            if outputs["z_pred"] is not None:
-                t = outputs["time"]
-                
-                #x_t, dot_x_t = interp.forward(x_0, x_1, t)
-                x_0 = rectified_flow.sample_source_distribution(X.shape[0])
-                #t = rectified_flow.sample_train_time(X.shape[0])
+            #outputs = model(X, y, gap_pid, energy, **model_kwargs)
+            time = torch.rand(size=(X.shape[0],)).to(X.device)
+            #t = outputs["time"]
+            #x_t, dot_x_t = interp.forward(x_0, x_1, t)
+            x_0 = rectified_flow.sample_source_distribution(X.shape[0])
+            #t = rectified_flow.sample_train_time(X.shape[0])
 
-                loss = rectified_flow.get_loss(
-                    x_0=x_0,
-                    x_1=X,
-                    t=t,
-                    y=y, 
-                    gap=gap_pid,
-                    energy= energy,
+            loss = rectified_flow.get_loss(
+                x_0=x_0,
+                x_1=X,
+                y= y,
+                gap= gap_pid,
+                energy=energy,
+                t=time,
                 )
-
-                nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
-                # loss_gen = (
-                #     gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
-                # )
-                # loss_gen = loss_gen.mean()
-                # loss = loss + loss_gen
-                logs["loss_gen"] += loss.detach()
-            if outputs["y_perturb"] is not None:
-                if use_event_loss:
-                    event_mask = y >= 200
-                    if event_mask.any():
-                        loss_event = torch.mean(
-                            outputs["alpha"][event_mask].squeeze(1)
-                            * class_cost(
-                                outputs["y_perturb"][event_mask][:, 200:],
-                                y[event_mask] - 200,
-                            )
-                        )
-                        logs["loss_event_perturb"] += loss_event.detach()
-                        loss = loss + loss_event
-
-                    if (~event_mask).any():
-                        loss_class = torch.mean(
-                            outputs["alpha"][~event_mask].squeeze(1)
-                            * class_cost(
-                                outputs["y_perturb"][~event_mask][:, :200],
-                                y[~event_mask],
-                            )
-                        )
-                        logs["loss_perturb"] += loss_class.detach()
-                        loss = loss + loss_class
-
-                else:
-                    loss_perturb = torch.mean(
-                        outputs["alpha"].squeeze(1)
-                        * class_cost(outputs["y_perturb"], y)
-                    )
-                    loss = loss + loss_perturb
-                    logs["loss_perturb"] += loss_perturb.detach()
-
+            logs["loss_gen"] += loss.detach()
+        
             if (
                 use_clip
                 and outputs["z_body"] is not None
@@ -341,7 +276,9 @@ def train_step(
                 loss = loss + loss_clip
                 logs["loss_clip"] += loss_clip.detach()
 
+            
         logs["loss"] += loss.detach()
+
         if use_amp and gscaler is not None:
             gscaler.scale(loss).backward()
             gscaler.unscale_(optimizer)
@@ -374,6 +311,37 @@ def test_step(
     use_event_loss=False,
     iterations_per_epoch=-1,
 ):
+    # TODO take this from diffusion_utils. (maybe wrihte them as lambda funciton there ?) 
+    # Pre-compute parameters for the cosine log SNR schedule
+    logsnr_min = -20.0
+    logsnr_max = 20.0
+    shift = 1.0
+
+    # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
+    b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
+    a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
+
+    # This lambda functions computes the alpha, sigma value based on the cosine schedule.
+    # As far as I can tell, this is the format requiere for AffineInterp
+    logsnr_schedule_lambda = lambda t: -2.0 * torch.log(torch.tan(a * t + b) * shift)
+    alpha_function = lambda t: torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
+    sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
+
+    #FIXME hardcoded
+    data_shape = (500,4)
+    # Initialize RectifiedFlow with custom settings
+    rectified_flow = RectifiedFlow(
+        data_shape= data_shape,#(32, 32),
+        velocity_field=model,
+        interp = AffineInterp(alpha=alpha_function, beta=sigma_function),
+        source_distribution="normal",
+        # is_independent_coupling=True,
+        # train_time_distribution="uniform",
+        # train_time_weight="uniform",
+        criterion="mse",
+        device=device,
+    )
+   
     model.eval()
 
     logs_buff = torch.zeros((7), dtype=torch.float32, device=device)
@@ -390,7 +358,6 @@ def test_step(
         iterations_per_epoch = len(dataloader)
 
     data_iter = iter(dataloader)
-    
     for batch_idx in range(iterations_per_epoch):
         try:
             batch = next(data_iter)
@@ -410,71 +377,22 @@ def test_step(
             for key in ["cond", "pid", "add_info"]
             if key in batch
         }
-        try:
-            with torch.no_grad():
-                outputs = model(X, y, gap_pid, energy, **model_kwargs)
-        except Exception as e:
-            print(f"batch_idx [{batch_idx}] skiped: Exception during model inference: {e}")
-            continue
-        loss = 0
+        
+        time = torch.rand(size=(X.shape[0],)).to(X.device)
+        #t = outputs["time"]
+        #x_t, dot_x_t = interp.forward(x_0, x_1, t)
+        x_0 = rectified_flow.sample_source_distribution(X.shape[0])
+        #t = rectified_flow.sample_train_time(X.shape[0])
 
-        if outputs["y_pred"] is not None:
-            if use_event_loss:
-                event_mask = y >= 200
-                if event_mask.any():
-                    loss_event = class_cost(
-                        outputs["y_pred"][event_mask][:, 200:], y[event_mask] - 200
-                    ).mean()
-                    logs["loss_class_event"] += loss_event.detach()
-                    loss = loss + loss_event
-                if (~event_mask).any():
-                    loss_class = class_cost(
-                        outputs["y_pred"][~event_mask][:, :200], y[~event_mask]
-                    ).mean()
-                    logs["loss_class"] += loss_class.detach()
-                    loss = loss + loss_class
-            else:
-                loss_class = class_cost(outputs["y_pred"], y).mean()
-                #FIXME
-                #y_int_labels = torch.argmax(y, dim=1)
-                #loss_class = class_cost(outputs["y_pred"], y_int_labels).mean()
-                loss = loss + loss_class
-                logs["loss_class"] += loss_class.detach()
-        if outputs["z_pred"] is not None:
-            nonzero = (outputs["v"][:, :, 0] != 0).sum(1)
-            loss_gen = gen_cost(outputs["v"], outputs["z_pred"]).sum((1, 2)) / nonzero
-            loss_gen = loss_gen.mean()
-            loss = loss + loss_gen
-            logs["loss_gen"] += loss_gen.detach()
-        if outputs["y_perturb"] is not None:
-            if use_event_loss:
-                event_mask = y >= 200
-                if event_mask.any():
-                    loss_event = torch.mean(
-                        outputs["alpha"][event_mask].squeeze(1)
-                        * class_cost(
-                            outputs["y_perturb"][event_mask][:, 200:],
-                            y[event_mask] - 200,
-                        )
-                    )
-                    logs["loss_event_perturb"] += loss_event.detach()
-                    loss = loss + loss_event
-                if (~event_mask).any():
-                    loss_class = torch.mean(
-                        outputs["alpha"][~event_mask].squeeze(1)
-                        * class_cost(
-                            outputs["y_perturb"][~event_mask][:, :200], y[~event_mask]
-                        )
-                    )
-                    logs["loss_perturb"] += loss_class.detach()
-                    loss = loss + loss_class
-
-            else:
-                loss_perturb = torch.mean(
-                    outputs["alpha"].squeeze(1) * class_cost(outputs["y_perturb"], y)
-                )
-                loss = loss + loss_perturb
-                logs["loss_perturb"] += loss_perturb.detach()
+        loss = rectified_flow.get_loss(
+            x_0=x_0,
+            x_1=X,
+            y= y,
+            gap= gap_pid,
+            energy=energy,
+            t=time,
+            )
+        logs["loss_gen"] += loss.detach()
 
         if use_clip and outputs["z_body"] is not None and outputs["x_body"] is not None:
             loss_clip = clip_loss(
@@ -805,8 +723,9 @@ def main(args):
     elif args.dataset == "ShapeNetCore":#shapenetcore
         shapenet_path = args.path
         dataset = ShapeNetCore(shapenet_path)
-
-    print(f"Successfully loaded dataset with {len(dataset)} total events.")
+    
+    if rank == 0:
+        print(f"Successfully loaded dataset with {len(dataset)} total events.")
         
     # Define the split ratios
     train_ratio = 0.8

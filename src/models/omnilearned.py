@@ -119,7 +119,7 @@ class PET2(nn.Module):
         # Specify parameters that should not be decayed
         return {"norm", "scale", "token"}
 
-    def forward(self, x, y, gap, energy, cond=None, pid=None, add_info=None):
+    def forward(self, x, t=None, y=None, gap=None, energy=None, cond=None, pid=None, add_info=None):
         y_pred, y_perturb, z_pred, v, x_body, z_body = (
             None,
             None,
@@ -128,7 +128,7 @@ class PET2(nn.Module):
             None,
             None,
         )
-        time = torch.rand(size=(x.shape[0],)).to(x.device)
+        time = torch.rand(size=(x.shape[0],)).to(x.device) if t is None else t
         _, alpha, sigma = get_logsnr_alpha_sigma(time)
         if self.mode == "generator" or self.mode == "pretrain":
             z, v = perturb(x, time)
@@ -142,17 +142,18 @@ class PET2(nn.Module):
             if self.mode == "pretrain":
                 y_perturb = self.classifier(z_body)
 
-        return {
-            "y_pred": y_pred,
-            "y_perturb": y_perturb,
-            "z_pred": z_pred,
-            "v": v,
-            "x_body": x_body,
-            "z_body": z_body,
-            "alpha": alpha,
-            "sigma": sigma,
-            "time": time,
-        }
+        # return {
+        #     "y_pred": y_pred,
+        #     "y_perturb": y_perturb,
+        #     "z_pred": z_pred,
+        #     "v": v,
+        #     "x_body": x_body,
+        #     "z_body": z_body,
+        #     "alpha": alpha,
+        #     "sigma": sigma,
+        #     "time": time,
+        # }
+        return z_pred
 #TODO add y, gap, energy to the classifier forward function
 class PET_classifier(nn.Module):
     def __init__(
@@ -367,7 +368,6 @@ class PET_generator(nn.Module):
             
             for ib, blk in enumerate(self.in_blocks):
                 x = blk(x, mask=mask)
-
             # Adjust the slicing to account for the three added tokens
             x = (
                 self.fc(x[:, self.num_add + self.num_tokens + 3 :]) 
