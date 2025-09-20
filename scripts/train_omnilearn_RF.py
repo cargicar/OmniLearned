@@ -37,6 +37,7 @@ import torch.amp as amp
 torch.set_float32_matmul_precision("high")
 torch._dynamo.config.verbose = False
 
+#TODO max number of points in cloud is still hardoced in the dataset. Add it to parse_arguments
 def parse_arguments():
     """
     Parses command-line arguments for the model training script.

@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from rectified_flow.rectified_flow import RectifiedFlow 
-from rectified_flow.samplers.base_sampler import Sampler
+#from rectified_flow.samplers.base_sampler import Sampler
 from rectified_flow.flow_components.interpolation_solver import AffineInterp
 from rectified_flow.utils import visualize_2d_trajectories_plotly, set_seed
 
@@ -22,7 +22,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore
-from src.diffusion.diffusion_utils import RF_sampler
+from src.diffusion.diffusion_utils import Sampler
 
 from src.utils import (
     is_master_node,
@@ -218,6 +218,12 @@ class MyEulerSampler(Sampler):
         
         # Update the state using the Euler formula
         self.x_t = x_t + (t_next - t) * v_t
+     
+    def record(self):
+        """
+        Overrides the base class method to prevent recording trajectories.
+        """
+        pass
 
 def gen(
     model,
@@ -239,7 +245,7 @@ def gen(
     sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
 
     #FIXME hardcoded
-    data_shape = (500,4)
+    data_shape = (1000,4)
     
     
     straight_rf = RectifiedFlow(
@@ -273,7 +279,7 @@ def gen(
     with torch.no_grad():                 
         euler_sampler = MyEulerSampler(
             rectified_flow=straight_rf,
-            num_steps=100,
+            num_steps=1000,
             num_samples=10,
         )
 
