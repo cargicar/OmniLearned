@@ -6,7 +6,83 @@ import numbers
 import random
 from itertools import repeat
 
+class Compose:
+    """
+    Composes several transforms together.
+    Args:
+        transforms (list of callables): List of transform objects to be applied.
+    """
+    def __init__(self, transforms: list):
+        self.transforms = transforms
 
+    def __call__(self, img):
+        for t in self.transforms:
+            img = t(img)
+        return img
+class MinMaxNormalize:
+    """
+    Min-Max normalization transform for PyTorch datasets.
+    It normalizes data to a [0, 1] range based on pre-calculated min and max values.
+    """
+    def __init__(self, min_vals: np.ndarray, max_vals: np.ndarray):
+        """
+        Initializes the normalizer with pre-calculated min and max values.
+
+        Args:
+            min_vals (np.ndarray): A NumPy array containing the minimum value for each feature.
+            max_vals (np.ndarray): A NumPy array containing the maximum value for each feature.
+        """
+        if min_vals.shape != max_vals.shape:
+            raise ValueError("min_vals and max_vals must have the same shape.")
+        
+        self.min_vals = min_vals
+        self.max_vals = max_vals
+
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        """
+        Applies the min-max normalization to the input data.
+
+        Args:
+            x (np.ndarray): The input data (e.g., a shower array) to be normalized.
+                            Expected shape is (N_particles, N_features).
+
+        Returns:
+            np.ndarray: The normalized data with values in the range [0, 1].
+        """
+        # Ensure that the dimensions match
+        if x.shape[-1] != self.min_vals.shape[-1]:
+            raise ValueError(f"Input data has {x.shape[-1]} features, but normalizer was initialized with {self.min_vals.shape[-1]} features.")
+        
+        # Apply the Min-Max normalization formula: (x - min) / (max - min)
+        # Using broadcasting for efficient computation
+        normalized_x = (x - self.min_vals) / (self.max_vals - self.min_vals)
+        return normalized_x
+
+class CentroidNormalize:
+    """
+    A transform that centers the data around the origin by subtracting the centroid.
+    The centroid is calculated as the mean of each feature dimension.
+    """
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        """
+        Applies the centroid normalization to the input data.
+
+        Args:
+            x (np.ndarray): The input data (e.g., a shower array) to be centered.
+                            Expected shape is (N_particles, 4).
+
+        Returns:
+            np.ndarray: The centered data.
+        """
+        # Calculate the mean of each feature (the centroid).
+        # The result will be an array of shape (4,).
+        centroid = np.mean(x, axis=0)
+        
+        # Subtract the centroid from each point.
+        # NumPy's broadcasting handles this efficiently.
+        centered_x = x - centroid
+        
+        return centered_x
 class Center(object):
     r"""Centers node positions around the origin."""
 

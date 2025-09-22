@@ -41,7 +41,7 @@ from src.data.dataset import ShapeNetCore
 import argparse
 import os # Import os for default path if needed
 
-#TODO Add DDP
+
 
 def parse_arguments():
     """
@@ -205,6 +205,58 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
         plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
         plt.close()
 
+def Ehistogram(X, spatial_dim = 0, title="Ehistogram", bin_width = 5):
+    np.random.seed(42)
+    num_particles = 500
+    energy_data = X[:, :, 3].detach().cpu().numpy() #FIXME abs shoudl not be necessary
+    x_data = X[:,:,spatial_dim].detach().cpu().numpy()
+    x_positions = x_data.flatten()
+    energies = energy_data.flatten()
+
+    # To create the 'dense' central region seen in the plot:
+    # x_positions_cluster = np.random.normal(0, 15, int(num_particles/2))
+    # energies_cluster = np.random.normal(1.0, 0.5, int(num_particles/2))
+    # x_positions = np.concatenate([x_data, x_positions_cluster])
+    # energies = np.concatenate([energies, energies_cluster])
+
+    # Find the minimum and maximum x-position to determine the range of our bins.
+    min_x = np.floor(x_positions.min() / bin_width) * bin_width
+    max_x = np.ceil(x_positions.max() / bin_width) * bin_width
+
+    # Create the bin edges.
+    bin_edges = np.arange(min_x, max_x + bin_width, bin_width)
+
+    # Use numpy's `digitize` to assign each particle to a bin.
+    # This returns an array of bin indices for each particle's x-position.
+    bin_indices = np.digitize(x_positions, bin_edges)
+
+    # --- 3. Calculate Total Energy Per Bin ---
+    # Create an array to store the total energy for each bin, initialized to zero.
+    total_energy_per_bin = np.zeros(len(bin_edges) - 1)
+
+    # Loop through each particle and add its energy to the correct bin.
+    # Note: bin_indices are 1-based, so we subtract 1 for array indexing.
+    for i in range(len(x_positions)):
+        # Make sure the index is within the valid range.
+        if 0 < bin_indices[i] <= len(total_energy_per_bin):
+            total_energy_per_bin[bin_indices[i] - 1] += energies[i]
+
+    # --- 4. Get Bin Centers for Plotting ---
+    # The x-axis for our plot should be the center of each bin.
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+    # --- 5. Plot the Results ---
+    plt.figure(figsize=(12, 7))
+
+    # Plotting as a bar chart is a good way to represent binned data.
+    plt.bar(bin_centers, total_energy_per_bin, width=bin_width * 0.9, edgecolor='black', alpha=0.7)
+
+    plt.title(f'Total Energy vs. Position Bins {title}')
+    plt.xlabel('x-position bins')
+    plt.ylabel('Total Energy per bin')
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+    plt.savefig(f'results/{title}.png')
+
 class MyEulerSampler(Sampler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -268,6 +320,7 @@ def gen(
     X, energy, y, gap_pid = batch
     X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
+    Ehistogram(X, title=f"Ehisto_dataset_E_primary{energy}")
     plot_batch_3d(X, y, gap_pid, energy, title = "DATASET")
     model = model.module if hasattr(model, "module") else model
     model_kwargs = {
@@ -305,6 +358,8 @@ def gen(
         #pts = RF_sampler(model, X, y, gap_pid, energy, 10, 500)
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
         pts= traj1.x_t
+        Ehistogram(pts, title=f"Ehisto_generated_E_primary_{energy}")
+        breakpoint()
         plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
     
     # return (

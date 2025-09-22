@@ -19,10 +19,10 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from lion_pytorch import Lion
 from diffusers.optimization import get_cosine_schedule_with_warmup
 
-from src.models.omnilearnedv2 import PET3
 from src.models.omnilearned import PET2
 #from src.diffusion.edm import EDM
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
+from src.data.transforms import MinMaxNormalize, CentroidNormalize, Compose
 
 from scripts.utils import (
     is_master_node,
@@ -33,6 +33,7 @@ from scripts.utils import (
 import time
 import os
 import torch.amp as amp
+import matplotlib.pyplot as plt
 
 torch.set_float32_matmul_precision("high")
 torch._dynamo.config.verbose = False
@@ -58,7 +59,7 @@ def parse_arguments():
     #                       help="Output directory for logs, checkpoints, and results.")
     parser.add_argument("--outdir", type=str, default="/data/ccardona/models/G4",
                        help="Output directory for logs, checkpoints, and results.")
-    parser.add_argument("--save_tag", type=str, default="detector_cats",
+    parser.add_argument("--save_tag", type=str, default="RF",
                         help="Tag to append to saved files (e.g., model checkpoints, logs).")
     parser.add_argument("--pretrain_tag", type=str, default="pretrain",
                         help="Tag to use when loading pre-trained models.")
@@ -159,6 +160,51 @@ def parse_arguments():
     return args
 
 
+def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud"):
+    """
+    Plots each individual point cloud from a batch in a separate 3D scatter plot.
+
+    Args:
+        batch_of_point_clouds: A PyTorch tensor of shape (B, N, 3), where:
+            - B is the batch size (e.g., 128)
+            - N is the number of points (e.g., 2048)
+            - 3 represents the (x, y, z) coordinates
+    """
+    # Get the batch size
+    batch_size = batch_of_point_clouds.shape[0]
+    # Loop through each point cloud in the batch
+    for i in range(10):
+    #for i in range(num_samples):
+        # Extract the current point cloud tensor
+        # .detach() is used to remove it from the computation graph.
+        # .cpu() ensures the tensor is on the CPU.
+        # .numpy() converts the tensor to a NumPy array, which matplotlib requires.
+        point_cloud = batch_of_point_clouds[i].detach().cpu().numpy()
+        category = int(cates[i].detach().cpu().numpy())
+        gap = int(gaps[i].detach().cpu().numpy())
+        energy = energies[i].detach().cpu().numpy()
+        # Separate the coordinates for plotting
+        x = point_cloud[:, 0]
+        y = point_cloud[:, 1]
+        z = point_cloud[:, 2]
+
+        # Create a new figure and a 3D subplot for the current point cloud
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot the points
+        ax.scatter(x, y, z, s=1)  # s is the marker size
+
+        # Set axis labels and a title
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title(f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy}')
+        
+        # Display the plot
+        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
+        plt.close()
+
 def train_step(
     model,
     dataloader,
@@ -243,6 +289,7 @@ def train_step(
             for key in ["cond", "pid", "add_info"]
             if key in batch
         }
+        
         with amp.autocast(
             "cuda:{}".format(device) if torch.cuda.is_available() else "cpu",
             enabled=use_amp,
@@ -714,7 +761,10 @@ def main(args):
     #     rank=rank,
     #     size=size,
     # )
+
+
     #TODO unify for all datasets,. Better make a class that load the dataset and split it
+    #TODO read transform paramaeter from somewhere else and pass it to the creation of dataset
     if args.dataset == "G4":#pkl
         pkl_files_path = args.path
         dataset = PklDataset(pkl_files_path)
@@ -727,11 +777,40 @@ def main(args):
     
     if rank == 0:
         print(f"Successfully loaded dataset with {len(dataset)} total events.")
+
+    #Transforms
+    #TODO read from detector geometries (?)
+    min_vals = dataset.all_showers.min(axis=(0,1))
+    max_vals = dataset.all_showers.max(axis=(0,1))
+    # 4. Create the normalization transform object with these values
+    
+    centroid_transform = CentroidNormalize()
+    minmax_transform = MinMaxNormalize(min_vals, max_vals)
+
+    composed_transform = Compose([
+                        centroid_transform,
+                        minmax_transform
+                        ])
+
+    #TODO Transformed dataset. 
+    if args.dataset == "G4":#pkl
+        pkl_files_path = args.path
+        dataset = PklDataset(pkl_files_path, transform=composed_transform)
+    elif args.dataset == "G4_h5":#h5
+        h5_file_path = args.path
+        dataset = HDF5Dataset(h5_file_path) #TODO, transform=normalize_transform)
+    elif args.dataset == "ShapeNetCore":#shapenetcore
+        shapenet_path = args.path
+        dataset = ShapeNetCore(shapenet_path)#TODO, transform=normalize_transform)
+    
+    if rank == 0:
+        print(f"Successfully loaded dataset with {len(dataset)} total events.")
         
     # Define the split ratios
     train_ratio = 0.8
     val_ratio = 0.1
     test_ratio = 0.1
+
 
     # Calculate the number of samples for each split
     num_events = len(dataset)
