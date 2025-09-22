@@ -8,6 +8,53 @@ from typing import Tuple
 import torch.distributed as dist
 from torch.distributed import init_process_group, get_rank
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+
+
+def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud"):
+    """
+    Plots each individual point cloud from a batch in a separate 3D scatter plot.
+
+    Args:
+        batch_of_point_clouds: A PyTorch tensor of shape (B, N, 3), where:
+            - B is the batch size (e.g., 128)
+            - N is the number of points (e.g., 2048)
+            - 3 represents the (x, y, z) coordinates
+    """
+    # Get the batch size
+    batch_size = batch_of_point_clouds.shape[0]
+    # Loop through each point cloud in the batch
+    for i in range(10):
+    #for i in range(num_samples):
+        # Extract the current point cloud tensor
+        # .detach() is used to remove it from the computation graph.
+        # .cpu() ensures the tensor is on the CPU.
+        # .numpy() converts the tensor to a NumPy array, which matplotlib requires.
+        point_cloud = batch_of_point_clouds[i].detach().cpu().numpy()
+        category = int(cates[i].detach().cpu().numpy())
+        gap = int(gaps[i].detach().cpu().numpy())
+        energy = energies[i].detach().cpu().numpy()
+        # Separate the coordinates for plotting
+        x = point_cloud[:, 0]
+        y = point_cloud[:, 1]
+        z = point_cloud[:, 2]
+
+        # Create a new figure and a 3D subplot for the current point cloud
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot the points
+        ax.scatter(x, y, z, s=1)  # s is the marker size
+
+        # Set axis labels and a title
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title(f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy}')
+        
+        # Display the plot
+        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
+        plt.close()
 
 
 def print_metrics(y_preds_np, y_np, thresholds=[0.3, 0.5], background_class=0):

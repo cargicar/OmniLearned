@@ -129,7 +129,7 @@ class PET2(nn.Module):
             None,
         )
         time = torch.rand(size=(x.shape[0],)).to(x.device) if t is None else t
-        _, alpha, sigma = get_logsnr_alpha_sigma(time)
+        #_, alpha, sigma = get_logsnr_alpha_sigma(time)
         if self.mode == "generator" or self.mode == "pretrain":
             z, v = perturb(x, time)
             z_body = self.body(z, cond, pid, add_info, time)

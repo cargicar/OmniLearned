@@ -64,5 +64,5 @@ def plot_losses(log_file_path):
     plt.close()
 if __name__ == "__main__":
     # Change this to the actual path of your log file
-    log_file_path = "train_rf_sep_20.txt" 
+    log_file_path = "train_rf_sep_22.txt" 
     plot_losses(log_file_path)

@@ -21,6 +21,7 @@ from diffusers.optimization import get_cosine_schedule_with_warmup
 
 from src.models.omnilearned import PET2
 #from src.diffusion.edm import EDM
+from src.diffusion.diffusion_utils import cosine_schedule
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore 
 from src.data.transforms import MinMaxNormalize, CentroidNormalize, Compose
 
@@ -33,7 +34,6 @@ from scripts.utils import (
 import time
 import os
 import torch.amp as amp
-import matplotlib.pyplot as plt
 
 torch.set_float32_matmul_precision("high")
 torch._dynamo.config.verbose = False
@@ -107,6 +107,17 @@ def parse_arguments():
     parser.add_argument("--num_workers", type=int, default=16,
                         help="Number of worker processes for data loading.")
 
+    # RF parameters 
+    parser.add_argument("--interp", type=str, default="straight",
+        help="Interpolation method for the rectified flow. Choose between ['straight', 'slerp', 'ddim'].",)
+    parser.add_argument("--source_distribution", type=str,default="normal",
+        help="Distribution of the source samples. Choose between ['normal'].",)
+    parser.add_argument("--is_independent_coupling", type=bool, default=True,
+        help="Whether training 1-Rectified Flow",)
+    parser.add_argument("--train_time_distribution", type=str, default="uniform",
+        help="Distribution of the training time samples. Choose between ['uniform', 'lognormal', 'u_shaped'].",)
+    parser.add_argument("--train_time_weight", type=str, default="uniform",
+        help="Weighting of the training time samples. Choose between ['uniform'].",)
 
     # --- Training Hyperparameters ---
     parser.add_argument("--batch", type=int, default=64,
@@ -159,52 +170,6 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
-
-def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud"):
-    """
-    Plots each individual point cloud from a batch in a separate 3D scatter plot.
-
-    Args:
-        batch_of_point_clouds: A PyTorch tensor of shape (B, N, 3), where:
-            - B is the batch size (e.g., 128)
-            - N is the number of points (e.g., 2048)
-            - 3 represents the (x, y, z) coordinates
-    """
-    # Get the batch size
-    batch_size = batch_of_point_clouds.shape[0]
-    # Loop through each point cloud in the batch
-    for i in range(10):
-    #for i in range(num_samples):
-        # Extract the current point cloud tensor
-        # .detach() is used to remove it from the computation graph.
-        # .cpu() ensures the tensor is on the CPU.
-        # .numpy() converts the tensor to a NumPy array, which matplotlib requires.
-        point_cloud = batch_of_point_clouds[i].detach().cpu().numpy()
-        category = int(cates[i].detach().cpu().numpy())
-        gap = int(gaps[i].detach().cpu().numpy())
-        energy = energies[i].detach().cpu().numpy()
-        # Separate the coordinates for plotting
-        x = point_cloud[:, 0]
-        y = point_cloud[:, 1]
-        z = point_cloud[:, 2]
-
-        # Create a new figure and a 3D subplot for the current point cloud
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot the points
-        ax.scatter(x, y, z, s=1)  # s is the marker size
-
-        # Set axis labels and a title
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        ax.set_title(f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy}')
-        
-        # Display the plot
-        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
-        plt.close()
-
 def train_step(
     model,
     dataloader,
@@ -222,22 +187,7 @@ def train_step(
     gscaler=None,
 ):  
     
-
-    # TODO take this from diffusion_utils. (maybe wrihte them as lambda funciton there ?) 
-    # Pre-compute parameters for the cosine log SNR schedule
-    logsnr_min = -20.0
-    logsnr_max = 20.0
-    shift = 1.0
-
-    # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
-    b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
-    a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
-
-    # This lambda functions computes the alpha, sigma value based on the cosine schedule.
-    # As far as I can tell, this is the format requiere for AffineInterp
-    logsnr_schedule_lambda = lambda t: -2.0 * torch.log(torch.tan(a * t + b) * shift)
-    alpha_function = lambda t: torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
-    sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
+    #_, alpha_function, sigma_function = lambda t: cosine_schedule(t)
 
     #FIXME hardcoded
     data_shape = (500,4)
@@ -245,8 +195,9 @@ def train_step(
     rectified_flow = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        interp = AffineInterp(alpha=alpha_function, beta=sigma_function),
-        source_distribution="normal",
+        #interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        interp = args.interp,
+        source_distribution=args.source_distribution,
         # is_independent_coupling=True,
         # train_time_distribution="uniform",
         # train_time_weight="uniform",
@@ -359,37 +310,23 @@ def test_step(
     use_event_loss=False,
     iterations_per_epoch=-1,
 ):
-    # TODO take this from diffusion_utils. (maybe wrihte them as lambda funciton there ?) 
-    # Pre-compute parameters for the cosine log SNR schedule
-    logsnr_min = -20.0
-    logsnr_max = 20.0
-    shift = 1.0
-
-    # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
-    b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
-    a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
-
-    # This lambda functions computes the alpha, sigma value based on the cosine schedule.
-    # As far as I can tell, this is the format requiere for AffineInterp
-    logsnr_schedule_lambda = lambda t: -2.0 * torch.log(torch.tan(a * t + b) * shift)
-    alpha_function = lambda t: torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
-    sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
-
+    #_, alpha_function, sigma_function = lambda t: cosine_schedule(t)
+    
     #FIXME hardcoded
     data_shape = (500,4)
     # Initialize RectifiedFlow with custom settings
     rectified_flow = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        interp = AffineInterp(alpha=alpha_function, beta=sigma_function),
-        source_distribution="normal",
+        #interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        interp = args.interp,
+        source_distribution=args.source_distribution,
         # is_independent_coupling=True,
         # train_time_distribution="uniform",
         # train_time_weight="uniform",
         criterion="mse",
         device=device,
     )
-   
     model.eval()
 
     logs_buff = torch.zeros((7), dtype=torch.float32, device=device)

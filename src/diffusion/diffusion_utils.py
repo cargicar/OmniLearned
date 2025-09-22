@@ -21,6 +21,37 @@ class MPFourier(nn.Module):
         y = y.cos() * np.sqrt(2)
         return x.unsqueeze(-1) * y.to(x.dtype)
 
+# @torch.compile
+# def cosine_schedule(t, logsnr_min = -20.0, logsnr_max = 20.0, shift = 1.0):
+        
+#     # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
+#     b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
+#     a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
+
+#     # This lambda functions computes the alpha, sigma value based on the cosine schedule.
+#     # As far as I can tell, this is the format requiere for AffineInterp
+#     logsnr_schedule_lambda = lambda t: -2.0 * torch.log(torch.tan(a * t + b) * shift)
+#     alpha_function = lambda t: torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
+#     sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
+#     return logsnr_schedule_lambda, alpha_function, sigma_function
+
+
+@torch.compile
+def cosine_schedule(t, logsnr_min = -20.0, logsnr_max = 20.0, shift = 1.0):
+        
+    # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
+    b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
+    a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
+
+    # This lambda functions computes the alpha, sigma value based on the cosine schedule.
+    # As far as I can tell, this is the format requiere for AffineInterp
+    def logsnr_schedule_lambda(t): 
+        return -2.0 * torch.log(torch.tan(a * t + b) * shift)
+    def alpha_function(t): 
+        return torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
+    def sigma_function(t): 
+        return torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
+    return logsnr_schedule_lambda, alpha_function, sigma_function
 
 @torch.compile
 def logsnr_schedule_cosine(t, logsnr_min=-20.0, logsnr_max=20.0, shift=1.0):

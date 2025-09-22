@@ -15,6 +15,9 @@ from rectified_flow.utils import visualize_2d_trajectories_plotly, set_seed
 rootutils.setup_root(__file__, pythonpath=True)
 #from src.models.omnilearnedv2 import PET3
 from src.models.omnilearned import PET2
+from src.diffusion.diffusion_utils import cosine_schedule
+
+from scripts.utils import plot_batch_3d
 #from dataloader import load_data
 import argparse
 import torch.distributed as dist
@@ -22,6 +25,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore
+from src.data.transforms import MinMaxNormalize, CentroidNormalize, Compose
 
 from src.utils import (
     is_master_node,
@@ -109,6 +113,19 @@ def parse_arguments():
                         help="Number of worker processes for data loading.")
 
 
+    # RF parameters 
+    parser.add_argument("--interp", type=str, default="straight",
+        help="Interpolation method for the rectified flow. Choose between ['straight', 'slerp', 'ddim'].",)
+    parser.add_argument("--source_distribution", type=str,default="normal",
+        help="Distribution of the source samples. Choose between ['normal'].",)
+    parser.add_argument("--is_independent_coupling", type=bool, default=True,
+        help="Whether training 1-Rectified Flow",)
+    parser.add_argument("--train_time_distribution", type=str, default="uniform",
+        help="Distribution of the training time samples. Choose between ['uniform', 'lognormal', 'u_shaped'].",)
+    parser.add_argument("--train_time_weight", type=str, default="uniform",
+        help="Weighting of the training time samples. Choose between ['uniform'].",)
+
+
     # --- Training Hyperparameters ---
     parser.add_argument("--batch", type=int, default=64,
                         help="Batch size for training.")
@@ -159,52 +176,6 @@ def parse_arguments():
 
     args = parser.parse_args()
     return args
-
-def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud"):
-    """
-    Plots each individual point cloud from a batch in a separate 3D scatter plot.
-
-    Args:
-        batch_of_point_clouds: A PyTorch tensor of shape (B, N, 3), where:
-            - B is the batch size (e.g., 128)
-            - N is the number of points (e.g., 2048)
-            - 3 represents the (x, y, z) coordinates
-    """
-    # Get the batch size
-    batch_size = batch_of_point_clouds.shape[0]
-    # Loop through each point cloud in the batch
-    for i in range(10):
-    #for i in range(num_samples):
-        # Extract the current point cloud tensor
-        # .detach() is used to remove it from the computation graph.
-        # .cpu() ensures the tensor is on the CPU.
-        # .numpy() converts the tensor to a NumPy array, which matplotlib requires.
-        point_cloud = batch_of_point_clouds[i].detach().cpu().numpy()
-        category = int(cates[i].detach().cpu().numpy())
-        gap = int(gaps[i].detach().cpu().numpy())
-        energy = energies[i].detach().cpu().numpy()
-        # Separate the coordinates for plotting
-        x = point_cloud[:, 0]
-        y = point_cloud[:, 1]
-        z = point_cloud[:, 2]
-
-        # Create a new figure and a 3D subplot for the current point cloud
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot the points
-        ax.scatter(x, y, z, s=1)  # s is the marker size
-
-        # Set axis labels and a title
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        ax.set_title(f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy}')
-        
-        # Display the plot
-        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
-        plt.close()
-
 class MyEulerSampler(Sampler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -228,37 +199,24 @@ def gen(
     model,
     dataloader,
     device="cuda" if torch.cuda.is_available() else "cpu",
-):
-    logsnr_min = -20.0
-    logsnr_max = 20.0
-    shift = 1.0
-
-    # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
-    b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
-    a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
-
-    # This lambda functions computes the alpha, sigma value based on the cosine schedule.
-    # As far as I can tell, this is the format requiere for AffineInterp
-    logsnr_schedule_lambda = lambda t: -2.0 * torch.log(torch.tan(a * t + b) * shift)
-    alpha_function = lambda t: torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
-    sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
+):  
+    _, alpha_function, sigma_function = cosine_schedule(t=torch.tensor(0.0))
 
     #FIXME hardcoded
     data_shape = (700,4)
     
-    
     straight_rf = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        interp = AffineInterp(alpha=alpha_function, beta=sigma_function),
-        source_distribution="normal",
+        interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        #interp = args.interp,
+        source_distribution=args.source_distribution,
         # is_independent_coupling=True,
         # train_time_distribution="uniform",
         # train_time_weight="uniform",
         criterion="mse",
         device=device,
     )
-
   
     model.eval()
     pts = []
@@ -268,7 +226,7 @@ def gen(
     X, energy, y, gap_pid = batch
     X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
-    plot_batch_3d(X, y, gap_pid, energy, title = "DATASET")
+    #plot_batch_3d(X, y, gap_pid, energy, title = "DATASET")
     model = model.module if hasattr(model, "module") else model
     model_kwargs = {
         key: (batch[key].to(device) if batch[key] is not None else None)
@@ -398,6 +356,23 @@ def main(args):
     val_ratio = 0.1
     test_ratio = 0.1
 
+    #Transforms
+    #TODO read from detector geometries (?)
+    min_vals = dataset.all_showers.min(axis=(0,1))
+    max_vals = dataset.all_showers.max(axis=(0,1))
+    # 4. Create the normalization transform object with these values
+    
+    centroid_transform = CentroidNormalize()
+    minmax_transform = MinMaxNormalize(min_vals, max_vals)
+
+    composed_transform = Compose([
+                        centroid_transform,
+                        minmax_transform
+                        ])
+
+    #TODO Transformed dataset. 
+    dataset = PklDataset(pkl_files_path, transform=composed_transform)
+
     # Calculate the number of samples for each split
     num_events = len(dataset)
     num_train = int(num_events * train_ratio)
@@ -409,8 +384,7 @@ def main(args):
         dataset, [num_train, num_val, num_test]
     )
     print(f"  Validation set: {len(val_dataset)} events")
-
-
+    
     # Create DataLoaders for each subset
     batch_size = args.batch
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate_fn, num_workers=args.num_workers)
