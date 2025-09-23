@@ -124,6 +124,9 @@ def parse_arguments():
         help="Distribution of the training time samples. Choose between ['uniform', 'lognormal', 'u_shaped'].",)
     parser.add_argument("--train_time_weight", type=str, default="uniform",
         help="Weighting of the training time samples. Choose between ['uniform'].",)
+    parser.add_argument("--num_steps", type=int, default=100,
+                        help="Number of steps for generation.")
+
 
 
     # --- Training Hyperparameters ---
@@ -199,18 +202,19 @@ def gen(
     model,
     dataloader,
     device="cuda" if torch.cuda.is_available() else "cpu",
+    num_steps = 10,
 ):  
     #NOTE Probably dont need this anymore, as straight sampler is samplying good enough
-    #_, alpha_function, sigma_function = cosine_schedule(t=torch.tensor(0.0))
+    _, alpha_function, sigma_function = cosine_schedule(t=torch.tensor(0.0))
 
     #FIXME hardcoded
-    data_shape = (700,4)
+    data_shape = (500,4)
     
     straight_rf = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        #interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
-        interp = args.interp,
+        interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        #interp = args.interp,
         source_distribution=args.source_distribution,
         # is_independent_coupling=True,
         # train_time_distribution="uniform",
@@ -237,7 +241,7 @@ def gen(
     with torch.no_grad():                 
         euler_sampler = MyEulerSampler(
             rectified_flow=straight_rf,
-            num_steps=1000,
+            num_steps=num_steps,
             num_samples=10,
         )
 
@@ -431,7 +435,7 @@ def main(args):
     )
 
     #eval_model(model, val_loader, device=device)
-    gen(model, val_loader, device)
+    gen(model, val_loader, device, num_steps= args.num_steps)
 
     dist.destroy_process_group()
 

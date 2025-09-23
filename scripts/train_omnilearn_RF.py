@@ -187,7 +187,7 @@ def train_step(
     gscaler=None,
 ):  
     
-    #_, alpha_function, sigma_function = lambda t: cosine_schedule(t)
+    _, alpha_function, sigma_function = cosine_schedule(t=torch.tensor(0.0))
 
     #FIXME hardcoded
     data_shape = (500,4)
@@ -195,8 +195,8 @@ def train_step(
     rectified_flow = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        #interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
-        interp = args.interp,
+        interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        #interp = args.interp,
         source_distribution=args.source_distribution,
         # is_independent_coupling=True,
         # train_time_distribution="uniform",
@@ -313,16 +313,15 @@ def test_step(
     #NOTE i am using stright interpolation and therefore modified the noise term in Omnilearn to have straight interpolation. However notice that 
     # so far the model working is with AffineInterpolation with alpha and sigma given below. Remember to try also
     # the cosine schedule from RF API
-    #_, alpha_function, sigma_function = lambda t: cosine_schedule(t)
-    
+    _, alpha_function, sigma_function = cosine_schedule(t=torch.tensor(0.0))
     #FIXME hardcoded
     data_shape = (500,4)
     # Initialize RectifiedFlow with custom settings
     rectified_flow = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        #interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
-        interp = args.interp,
+        interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        #interp = args.interp,
         source_distribution=args.source_distribution,
         # is_independent_coupling=True,
         # train_time_distribution="uniform",
