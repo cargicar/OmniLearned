@@ -72,8 +72,8 @@ def perturb(x, time):
     #mask = x[:, :, 3:4] != 0
     mask = x[:, :, 2:3] != 0
     eps = torch.randn_like(x)  # eps ~ N(0, 1)
-    #logsnr, alpha, sigma = get_logsnr_alpha_sigma(time)
-    alpha, sigma = time[:, None, None], 1-time[:, None, None]
+    logsnr, alpha, sigma = get_logsnr_alpha_sigma(time)
+    #alpha, sigma = time[:, None, None], 1-time[:, None, None]
     z = alpha * x + eps * sigma
     v = alpha * eps - sigma * x
     return z * mask, v * mask
@@ -119,11 +119,7 @@ def DDIM_sampler(model, X, y, gap, energy, num_steps= 1000, num_points= 500, dev
             logsnr_s, alpha_s, sigma_s = get_logsnr_alpha_sigma(t_prev)
             #v = model(x, t, cond)
             # Predict the velocity
-            # The model's body takes the noisy data and conditions
-            # TODO, I can read the whole batch here, and pass the whole model instead of fraction it in body and generator
-            z_body = model.body(x, cond, pid, add_info, t)
-            # The generator predicts the velocity
-            z_pred_v = model.generator(z_body, y, gap, energy)
+            z_pred_v = model(x, t=t, y=y, gap=gap, energy=energy)
             #output_dic = model(x,y, **model_kwargs) # Doing from the whole model is weird. Does not take time?  
             #z_pred_v = output_dic["z_pred"]
             # --- Denoising Step ---
