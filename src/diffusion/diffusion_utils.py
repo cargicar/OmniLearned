@@ -72,7 +72,8 @@ def perturb(x, time):
     #mask = x[:, :, 3:4] != 0
     mask = x[:, :, 2:3] != 0
     eps = torch.randn_like(x)  # eps ~ N(0, 1)
-    logsnr, alpha, sigma = get_logsnr_alpha_sigma(time)
+    #logsnr, alpha, sigma = get_logsnr_alpha_sigma(time)
+    alpha, sigma = time[:, None, None], 1-time[:, None, None]
     z = alpha * x + eps * sigma
     v = alpha * eps - sigma * x
     return z * mask, v * mask

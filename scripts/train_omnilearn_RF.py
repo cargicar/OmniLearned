@@ -137,11 +137,11 @@ def parse_arguments():
                         help="Beta1 parameter for Adam-like optimizers.")
     parser.add_argument("--b2", type=float, default=0.98,
                         help="Beta2 parameter for Adam-like optimizers.")
-    parser.add_argument("--lr", type=float, default=5e-4,
+    parser.add_argument("--lr", type=float, default=5e-5,
                         help="Initial learning rate.")
     parser.add_argument("--lr_factor", type=float, default=10.0,
                         help="Learning rate factor for fine-tuning or scheduling.")
-    parser.add_argument("--wd", type=float, default=0.3,
+    parser.add_argument("--wd", type=float, default=0.001,
                         help="Weight decay (L2 regularization).")
 
     # --- Model Architecture Hyperparameters (if applicable, e.g., for a Transformer) ---
@@ -310,6 +310,9 @@ def test_step(
     use_event_loss=False,
     iterations_per_epoch=-1,
 ):
+    #NOTE i am using stright interpolation and therefore modified the noise term in Omnilearn to have straight interpolation. However notice that 
+    # so far the model working is with AffineInterpolation with alpha and sigma given below. Remember to try also
+    # the cosine schedule from RF API
     #_, alpha_function, sigma_function = lambda t: cosine_schedule(t)
     
     #FIXME hardcoded

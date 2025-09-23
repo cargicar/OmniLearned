@@ -200,7 +200,8 @@ def gen(
     dataloader,
     device="cuda" if torch.cuda.is_available() else "cpu",
 ):  
-    _, alpha_function, sigma_function = cosine_schedule(t=torch.tensor(0.0))
+    #NOTE Probably dont need this anymore, as straight sampler is samplying good enough
+    #_, alpha_function, sigma_function = cosine_schedule(t=torch.tensor(0.0))
 
     #FIXME hardcoded
     data_shape = (700,4)
@@ -208,8 +209,8 @@ def gen(
     straight_rf = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
-        #interp = args.interp,
+        #interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        interp = args.interp,
         source_distribution=args.source_distribution,
         # is_independent_coupling=True,
         # train_time_distribution="uniform",

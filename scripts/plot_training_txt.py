@@ -13,6 +13,7 @@ def plot_losses(log_file_path):
     gen_losses = []
     gen_val_losses = []
     current_epoch = None
+    initial = 1
 
     try:
         with open(log_file_path, 'r') as file:
@@ -51,8 +52,8 @@ def plot_losses(log_file_path):
 
     # Plot the data
     plt.figure(figsize=(10, 6))
-    plt.plot(epochs[2:], gen_losses[2:], label='Generation Loss', marker='o', linestyle='-')
-    plt.plot(epochs[2:], gen_val_losses[2:], label='Generation Validation Loss', marker='x', linestyle='--')
+    plt.plot(epochs[initial:], gen_losses[initial:], label='Generation Loss', marker='o', linestyle='-')
+    plt.plot(epochs[initial:], gen_val_losses[initial:], label='Generation Validation Loss', marker='x', linestyle='--')
     
     plt.title('Training and Validation Loss over Epochs')
     plt.xlabel('Epoch')
