@@ -22,6 +22,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #from pytorch_optimizer import Lion
 #from lion_pytorch import Lion
 from src.data.dataset import HDF5Dataset, pad_collate_fn, PklDataset, ShapeNetCore
+from src.data.transforms import MinMaxNormalize, CentroidNormalize, Compose
 
 from src.utils import (
     is_master_node,
@@ -71,6 +72,21 @@ def parse_arguments():
     parser.add_argument("--wandb", action="store_true", # Use store_true for boolean flags
                         help="Enable Weights & Biases logging.")
    
+    
+    # RF parameters 
+    parser.add_argument("--interp", type=str, default="straight",
+        help="Interpolation method for the rectified flow. Choose between ['straight', 'slerp', 'ddim'].",)
+    parser.add_argument("--source_distribution", type=str,default="normal",
+        help="Distribution of the source samples. Choose between ['normal'].",)
+    parser.add_argument("--is_independent_coupling", type=bool, default=True,
+        help="Whether training 1-Rectified Flow",)
+    parser.add_argument("--train_time_distribution", type=str, default="uniform",
+        help="Distribution of the training time samples. Choose between ['uniform', 'lognormal', 'u_shaped'].",)
+    parser.add_argument("--train_time_weight", type=str, default="uniform",
+        help="Weighting of the training time samples. Choose between ['uniform'].",)
+    parser.add_argument("--num_steps", type=int, default=100,
+                        help="Number of steps for generation.")
+
     # --- Training State Arguments ---
     parser.add_argument("--fine_tune", action="store_true",
                         help="Enable fine-tuning mode (loads pre-trained weights and adjusts learning rate).")
@@ -173,7 +189,7 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
     # Get the batch size
     batch_size = batch_of_point_clouds.shape[0]
     # Loop through each point cloud in the batch
-    for i in range(10):
+    for i in range(batch_size):
     #for i in range(num_samples):
         # Extract the current point cloud tensor
         # .detach() is used to remove it from the computation graph.
@@ -205,58 +221,72 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
         plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
         plt.close()
 
-def Ehistogram(X, spatial_dim = 0, title="Ehistogram", bin_width = 5):
-    np.random.seed(42)
-    num_particles = 500
-    energy_data = X[:, :, 3].detach().cpu().numpy() #FIXME abs shoudl not be necessary
-    x_data = X[:,:,spatial_dim].detach().cpu().numpy()
-    x_positions = x_data.flatten()
-    energies = energy_data.flatten()
+def Ehistogram(X1, X2, spatial_dim=0, title="Ehistogram Comparison", bin_width=0.05):
+    """
+    Plots two energy histograms on the same canvas for comparison.
 
-    # To create the 'dense' central region seen in the plot:
-    # x_positions_cluster = np.random.normal(0, 15, int(num_particles/2))
-    # energies_cluster = np.random.normal(1.0, 0.5, int(num_particles/2))
-    # x_positions = np.concatenate([x_data, x_positions_cluster])
-    # energies = np.concatenate([energies, energies_cluster])
+    Args:
+        X1 (torch.Tensor): The first data tensor of shape (batch_size, num_particles, 4).
+        X2 (torch.Tensor): The second data tensor of shape (batch_size, num_particles, 4).
+        spatial_dim (int): The spatial dimension to use for binning (0 for x, 1 for y, 2 for z).
+        title (str): The title for the plot and the filename for saving.
+        bin_width (float): The width of each spatial bin.
+    """
+    # 1. X    
+    # energy1 = X1[:, :, 3].detach().cpu().numpy().flatten()
+    # x_positions1 = X1[:, :, spatial_dim].detach().cpu().numpy().flatten()
+    
+    # # 2. Generated
+    # energy2 = X2[:, :, 3].detach().cpu().numpy().flatten()
+    # x_positions2 = X2[:, :, spatial_dim].detach().cpu().numpy().flatten()
 
-    # Find the minimum and maximum x-position to determine the range of our bins.
-    min_x = np.floor(x_positions.min() / bin_width) * bin_width
-    max_x = np.ceil(x_positions.max() / bin_width) * bin_width
+    #NOTE just use first point cloud
+    energy1 = X1[0, :, 3].detach().cpu().numpy().flatten()
+    x_positions1 = X1[0, :, spatial_dim].detach().cpu().numpy().flatten()
+    
+    # 2. Generated
+    energy2 = X2[0, :, 3].detach().cpu().abs().numpy().flatten() #NOTE abs cheating
+    x_positions2 = X2[0, :, spatial_dim].detach().cpu().numpy().flatten()
 
-    # Create the bin edges.
+    # 3. Combine data to determine the global bin edges
+    all_x_positions = np.concatenate([x_positions1, x_positions2])
+    min_x = np.floor(all_x_positions.min() / bin_width) * bin_width
+    max_x = np.ceil(all_x_positions.max() / bin_width) * bin_width
     bin_edges = np.arange(min_x, max_x + bin_width, bin_width)
-
-    # Use numpy's `digitize` to assign each particle to a bin.
-    # This returns an array of bin indices for each particle's x-position.
-    bin_indices = np.digitize(x_positions, bin_edges)
-
-    # --- 3. Calculate Total Energy Per Bin ---
-    # Create an array to store the total energy for each bin, initialized to zero.
-    total_energy_per_bin = np.zeros(len(bin_edges) - 1)
-
-    # Loop through each particle and add its energy to the correct bin.
-    # Note: bin_indices are 1-based, so we subtract 1 for array indexing.
-    for i in range(len(x_positions)):
-        # Make sure the index is within the valid range.
-        if 0 < bin_indices[i] <= len(total_energy_per_bin):
-            total_energy_per_bin[bin_indices[i] - 1] += energies[i]
-
-    # --- 4. Get Bin Centers for Plotting ---
-    # The x-axis for our plot should be the center of each bin.
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-    # --- 5. Plot the Results ---
+    # 4. Bin and sum energy for X1
+    total_energy1 = np.zeros(len(bin_edges) - 1)
+    bin_indices1 = np.digitize(x_positions1, bin_edges)
+    for i in range(len(x_positions1)):
+        if 0 < bin_indices1[i] <= len(total_energy1):
+            total_energy1[bin_indices1[i] - 1] += energy1[i]
+    
+    # 5. Bin and sum energy for X2
+    total_energy2 = np.zeros(len(bin_edges) - 1)
+    bin_indices2 = np.digitize(x_positions2, bin_edges)
+    for i in range(len(x_positions2)):
+        if 0 < bin_indices2[i] <= len(total_energy2):
+            total_energy2[bin_indices2[i] - 1] += energy2[i]
+
+    # 6. Plotting
     plt.figure(figsize=(12, 7))
 
-    # Plotting as a bar chart is a good way to represent binned data.
-    plt.bar(bin_centers, total_energy_per_bin, width=bin_width * 0.9, edgecolor='black', alpha=0.7)
+    # Plot X1 data with a smaller offset
+    plt.bar(bin_centers - bin_width/4, total_energy1, width=bin_width/2, 
+            edgecolor='black', alpha=0.7, label='Dataset')
 
-    plt.title(f'Total Energy vs. Position Bins {title}')
-    plt.xlabel('x-position bins')
+    # Plot X2 data with a different offset and color
+    plt.bar(bin_centers + bin_width/4, total_energy2, width=bin_width/2, 
+            edgecolor='black', alpha=0.7, label='Generated', color='red')
+
+    plt.title(f'Total Energy vs. Position Bins - {title}')
+    plt.xlabel(f'Position along dimension {spatial_dim}')
     plt.ylabel('Total Energy per bin')
+    plt.legend()
     plt.grid(axis='y', linestyle='--', alpha=0.6)
     plt.savefig(f'results/{title}.png')
-
+    
 class MyEulerSampler(Sampler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -280,29 +310,19 @@ def gen(
     model,
     dataloader,
     device="cuda" if torch.cuda.is_available() else "cpu",
+    interp = "straight",
+    num_steps= 100,
 ):
-    logsnr_min = -20.0
-    logsnr_max = 20.0
-    shift = 1.0
-
-    # Pre-compute the 'a' and 'b' parameters for the cosine schedule.
-    b = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_max)))
-    a = torch.atan(torch.exp(-0.5 * torch.tensor(logsnr_min))) - b
-
-    # This lambda functions computes the alpha, sigma value based on the cosine schedule.
-    # As far as I can tell, this is the format requiere for AffineInterp
-    logsnr_schedule_lambda = lambda t: -2.0 * torch.log(torch.tan(a * t + b) * shift)
-    alpha_function = lambda t: torch.sqrt(torch.sigmoid(logsnr_schedule_lambda(t)))
-    sigma_function = lambda t: torch.sqrt(torch.sigmoid(-logsnr_schedule_lambda(t)))
 
     #FIXME hardcoded
-    data_shape = (700,4)
+    data_shape = (500,4)
     
     
     straight_rf = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        interp = AffineInterp(alpha=alpha_function, beta=sigma_function),
+        #interp = AffineInterp(name= "logsnr", alpha=alpha_function, beta=sigma_function),
+        interp = interp,
         source_distribution="normal",
         # is_independent_coupling=True,
         # train_time_distribution="uniform",
@@ -320,8 +340,9 @@ def gen(
     X, energy, y, gap_pid = batch
     X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     y = (y == 2).long()
-    Ehistogram(X, title=f"Ehisto_dataset_E_primary{energy}")
-    plot_batch_3d(X, y, gap_pid, energy, title = "DATASET")
+    x_e, x_g, y_e, y_g, e_energ, g_energ = X[y==0], X[y==1], y[y==0], y[y==1], energy[y==0], energy[y==1]
+
+    #plot_batch_3d(x_e, y_e, gap_pid, energy, title = "DATASET")
     model = model.module if hasattr(model, "module") else model
     model_kwargs = {
         key: (batch[key].to(device) if batch[key] is not None else None)
@@ -331,7 +352,7 @@ def gen(
     with torch.no_grad():                 
         euler_sampler = MyEulerSampler(
             rectified_flow=straight_rf,
-            num_steps=1000,
+            num_steps=num_steps,
             num_samples=10,
         )
 
@@ -358,9 +379,10 @@ def gen(
         #pts = RF_sampler(model, X, y, gap_pid, energy, 10, 500)
         #plot_batch_3d(outputs["x_body"], title = "from model x_body")
         pts= traj1.x_t
-        Ehistogram(pts, title=f"Ehisto_generated_E_primary_{energy}")
+        gx_e, gx_g= pts[y==0], pts[y==1]
+        Ehistogram(x_e, gx_e, title=f"Ehisto_generated_E_primary_{e_energ[0]}")
+        #plot_batch_3d(gx_e, y_e, gap_pid, energy, title = "from model sampler")
         breakpoint()
-        plot_batch_3d(pts, y, gap_pid, energy, title = "from model sampler")
     
     # return (
     #     torch.cat(pts).to(device),
@@ -453,6 +475,23 @@ def main(args):
     val_ratio = 0.1
     test_ratio = 0.1
 
+    #Transforms
+    #TODO read from detector geometries (?)
+    min_vals = dataset.all_showers.min(axis=(0,1))
+    max_vals = dataset.all_showers.max(axis=(0,1))
+    # 4. Create the normalization transform object with these values
+    
+    centroid_transform = CentroidNormalize()
+    minmax_transform = MinMaxNormalize(min_vals, max_vals)
+
+    composed_transform = Compose([
+                        centroid_transform,
+                        minmax_transform
+                        ])
+
+    #TODO Transformed dataset. 
+    dataset = PklDataset(pkl_files_path, transform=composed_transform)
+
     # Calculate the number of samples for each split
     num_events = len(dataset)
     num_train = int(num_events * train_ratio)
@@ -511,7 +550,7 @@ def main(args):
     )
 
     #eval_model(model, val_loader, device=device)
-    gen(model, val_loader, device)
+    gen(model, val_loader, device, interp = args.interp, num_steps= args.num_steps)
 
     dist.destroy_process_group()
 

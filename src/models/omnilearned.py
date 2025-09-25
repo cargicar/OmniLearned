@@ -131,7 +131,7 @@ class PET2(nn.Module):
         time = torch.rand(size=(x.shape[0],)).to(x.device) if t is None else t
         #_, alpha, sigma = get_logsnr_alpha_sigma(time)
         if self.mode == "generator" or self.mode == "pretrain":           
-            z, v = perturb(x, time) # NOTE How important is this schedule? can we just go with strainght? 
+            #z, v = perturb(x, time) # NOTE How important is this schedule? can we just go with strainght? 
             z_body = self.body(x, cond, pid, add_info, time)
             z_pred = self.generator(z_body, y, gap, energy)
 

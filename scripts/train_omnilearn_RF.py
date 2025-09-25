@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
-from rectified_flow.rectified_flow import RectifiedFlow 
+from rectified_flow.rectified_flow import RectifiedFlow
 from rectified_flow.flow_components.interpolation_solver import AffineInterp
 
 rootutils.setup_root(__file__, pythonpath=True)
@@ -137,7 +137,7 @@ def parse_arguments():
                         help="Beta1 parameter for Adam-like optimizers.")
     parser.add_argument("--b2", type=float, default=0.98,
                         help="Beta2 parameter for Adam-like optimizers.")
-    parser.add_argument("--lr", type=float, default=5e-5,
+    parser.add_argument("--lr", type=float, default=7e-4,
                         help="Initial learning rate.")
     parser.add_argument("--lr_factor", type=float, default=10.0,
                         help="Learning rate factor for fine-tuning or scheduling.")
@@ -195,7 +195,7 @@ def train_step(
     rectified_flow = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        interp = AffineInterp(name = "logsnr", alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
         #interp = args.interp,
         source_distribution=args.source_distribution,
         # is_independent_coupling=True,
@@ -314,13 +314,16 @@ def test_step(
     # so far the model working is with AffineInterpolation with alpha and sigma given below. Remember to try also
     # the cosine schedule from RF API
     _, alpha_function, sigma_function = cosine_schedule(t=torch.tensor(0.0))
+
     #FIXME hardcoded
     data_shape = (500,4)
     # Initialize RectifiedFlow with custom settings
+    
     rectified_flow = RectifiedFlow(
         data_shape= data_shape,#(32, 32),
         velocity_field=model,
-        interp = AffineInterp(alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
+        #interp =
+        interp = AffineInterp(name = "logsnr", alpha=alpha_function, beta=sigma_function), # if alpha and sigma are given
         #interp = args.interp,
         source_distribution=args.source_distribution,
         # is_independent_coupling=True,

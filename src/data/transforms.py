@@ -61,7 +61,7 @@ class MinMaxNormalize:
 class CentroidNormalize:
     """
     A transform that centers the data around the origin by subtracting the centroid.
-    The centroid is calculated as the mean of each feature dimension.
+    The centroid is calculated as the mean of each feature dimension, excluding the third feature (index 3).
     """
     def __call__(self, x: np.ndarray) -> np.ndarray:
         """
@@ -72,15 +72,18 @@ class CentroidNormalize:
                             Expected shape is (N_particles, 4).
 
         Returns:
-            np.ndarray: The centered data.
+            np.ndarray: The centered data. The third feature remains unchanged.
         """
-        # Calculate the mean of each feature (the centroid).
-        # The result will be an array of shape (4,).
-        centroid = np.mean(x, axis=0)
+        # Create a copy to avoid modifying the original array
+        centered_x = x.copy()
         
-        # Subtract the centroid from each point.
-        # NumPy's broadcasting handles this efficiently.
-        centered_x = x - centroid
+        # Calculate the mean of the first three features (indices 0, 1, 2)
+        # and ignore the fourth one (index 3).
+        centroid = np.mean(x[:, :3], axis=0)
+        
+        # Subtract the centroid from the first three features only.
+        # This uses NumPy's broadcasting.
+        centered_x[:, :3] = x[:, :3] - centroid
         
         return centered_x
 class Center(object):
