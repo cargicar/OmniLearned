@@ -8,39 +8,6 @@ import numpy as np
 import pickle
 
 
-def pad_collate_fn(batch, max_particles=500):
-    """
-    Custom collate function to handle batches of showers with varying numbers of particles.
-    It pads or truncates each shower to a fixed size and then stacks them.
-
-    Args:
-        batch (list): A list of data samples from the dataset.
-        max_particles (int): The maximum number of particles to keep per shower.
-    Returns:
-        A tuple of batched PyTorch tensors.
-    """
-    showers_list, energies_list, pids_list, gap_pids_list = zip(*batch)
-
-    padded_showers = []
-    for shower in showers_list:
-        num_particles = shower.shape[0]
-        if num_particles > max_particles:
-            # Truncate if the number of particles exceeds the max
-            padded_shower = shower[:max_particles]
-        else:
-            # Pad with zeros if the number of particles is less than the max
-            padding = torch.zeros(max_particles - num_particles, shower.shape[1], dtype=shower.dtype, device=shower.device)
-            padded_shower = torch.cat([shower, padding], dim=0)
-        padded_showers.append(padded_shower)
-
-    # Stack all tensors to create the batch
-    showers_batch = torch.stack(padded_showers, dim=0)
-    energies_batch = torch.stack(energies_list, dim=0)
-    pids_batch = torch.stack(pids_list, dim=0)
-    gap_pids_batch = torch.stack(gap_pids_list, dim=0)
-
-    return showers_batch, energies_batch, pids_batch, gap_pids_batch
-
 class HDF5Dataset(Dataset):
     """
     A PyTorch Dataset for loading data from a single HDF5 file.
