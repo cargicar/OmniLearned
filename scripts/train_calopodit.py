@@ -178,7 +178,7 @@ def parse_args():
     parser.add_argument(
         "--resume_from_checkpoint",
         type=str,
-        default=None,
+        default="latest",
         help=(
             "Whether training should be resumed from a previous checkpoint. Use a path saved by"
             ' `--checkpointing_steps`, or `"latest"` to automatically select the last available checkpoint.'
@@ -210,7 +210,7 @@ def parse_args():
     parser.add_argument(
         "--lr_scheduler",
         type=str,
-        default="constant",
+        default="cosine",
         help=(
             'The scheduler type to use. Choose between ["linear", "cosine", "cosine_with_restarts", "polynomial",'
             ' "constant", "constant_with_warmup"]'
@@ -441,6 +441,7 @@ def main(args):
     # 1.1 Prepare models
     logger.info("******  preparing models  ******")
 
+    #TODO clean up this config. Delet unused params and add new useful ones.
     DiT_config = DiTConfig(
         #Point transformer config
         nblocks =  4,
@@ -449,7 +450,7 @@ def main(args):
         #num_centroids = 128,
         num_class = 2,
         in_features=4,
-        transformer_features = 128, #512
+        transformer_features = 128, #512 = hidden_size in current implementation
         #DiT config
         out_channels=4,
         hidden_size=128,
@@ -469,7 +470,7 @@ def main(args):
         model_ema = EMAModel(model)
 
     # 2. Prepare datasets
-    logger.info("******  preparing datasets  ******")
+    logger.info("***l***  preparing datasets  ******")
 
 
 
@@ -499,15 +500,12 @@ def main(args):
                         ])
 
     # Transformed dataset.
-    if args.dataset == "G4":#pkl
-        pkl_files_path = args.path
-        dataset = PklDataset(pkl_files_path, transform=composed_transform)
+    if args.dataset == "G4_pkl":#pkl # Change name to anything if you wnat to unnormalized quickly
+        dataset = PklDataset(files_path, transform=composed_transform)
     elif args.dataset == "G4_h5":#h5
-        h5_file_path = args.path
-        dataset = HDF5Dataset(h5_file_path) #TODO, transform=normalize_transform)
+        dataset = HDF5Dataset(files_path) #TODO, transform=normalize_transform)
     elif args.dataset == "ShapeNetCore":#shapenetcore
-        shapenet_path = args.path
-        dataset = ShapeNetCore(shapenet_path)#TODO, transform=normalize_transform)
+        dataset = ShapeNetCore(files_path)#TODO, transform=normalize_transform)
     
     
     accelerator.print(f"Successfully loaded dataset with {len(dataset)} total events.")
