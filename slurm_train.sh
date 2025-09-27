@@ -14,4 +14,5 @@
 module load conda
 conda activate omnilearned
 module load pytorch
-srun python scripts/train_omnilearn.py --num_classes 2 --resuming
+#srun python scripts/train_omnilearn.py --num_classes 2 --resuming
+#srun torchrun 
