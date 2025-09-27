@@ -446,7 +446,7 @@ def main(args):
                                     )
             model.load_state_dict(checkpoint)        
 
-
+    print(f"Resuming from checkpoint {path}")
     model.eval().requires_grad_(False)
 
     if args.validation: 
@@ -538,10 +538,10 @@ def main(args):
         iterdata = iter(val_loader)
         batch = next(iterdata)
         X, energy, y, gap_pid = batch
-        #FIXME, model trained without conditioning! 
+        X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     
     #FIXME features hardcoded
-    data_shape = (args.max_particles,4)
+    data_shape = (args.max_particles, 4)
     # wrap up rectified_flow after accelerator.prepare
     rectified_flow = RectifiedFlow(
         data_shape=data_shape,
