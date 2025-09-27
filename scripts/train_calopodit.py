@@ -448,16 +448,16 @@ def main(args):
         name= "calopodit",
         num_points = args.max_particles,
         #num_centroids = 128,
-        num_class = 2,
         in_features=4,
         transformer_features = 128, #512 = hidden_size in current implementation
         #DiT config
+        num_classes = 2,
+        gap_classes = 4,
         out_channels=4,
         hidden_size=128,
         depth=13,
         num_heads=8,
         mlp_ratio=4,
-        num_classes=0,
         use_long_skip=True,
         final_conv=False,
     )

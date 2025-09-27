@@ -41,7 +41,8 @@ class DiTConfig:
     out_channels: int = 4
     name: str = "calopodit"
     num_points: int = 500
-    num_class: int = 4 
+    num_classes: int = 2
+    gap_classes: int = 4
     input_dim: int = 4
     # Usual DiT
     input_size: int = 32
@@ -50,7 +51,6 @@ class DiTConfig:
     num_heads: int = 8
     mlp_ratio: int = 4.0
     class_dropout_prob: float = 0.1
-    num_classes: int = 0
     use_long_skip: bool = True
     final_conv: bool = False
 
@@ -140,6 +140,71 @@ class LabelEmbedder(nn.Module):
         embeddings = self.embedding_table(labels)
         return embeddings
 
+class EnergyEmbedder(nn.Module):
+    """
+    Embeds continuous (float) energy class into vector representations.
+    Preserves label dropout for Classifier-Free Guidance (CFG).
+    """
+
+    def __init__(self, hidden_size, dropout_prob, mlp_layers=3):
+        super().__init__()
+        self.dropout_prob = dropout_prob
+        self.hidden_size = hidden_size
+
+        # The MLP maps the single float input (dimension 1) to the hidden_size.
+        mlp_modules = [
+            nn.Linear(1, hidden_size),
+            nn.SiLU(), # Swish is a common activation for this
+        ]
+        for _ in range(mlp_layers - 1):
+             mlp_modules.extend([
+                nn.Linear(hidden_size, hidden_size),
+                nn.SiLU(),
+            ])
+        
+        self.embedding_mlp = nn.Sequential(*mlp_modules)
+
+        # This replaces the need for an extra slot in nn.Embedding
+        self.null_embedding = nn.Parameter(torch.randn(1, hidden_size))
+
+    def forward(self, labels, train, force_drop_ids=None):
+        """
+        Args:
+            labels (torch.Tensor): Input tensor of continuous labels (B, 1).
+            train (bool): Whether in training mode (for dropout).
+            force_drop_ids (torch.Tensor, optional): Explicitly define which samples to drop.
+        Returns:
+            torch.Tensor: Embedded label vectors (B, hidden_size).
+        """
+        B = labels.shape[0]
+
+        # Ensure labels are of shape (B, 1) for the MLP input
+        if labels.ndim == 1:
+             labels = labels.unsqueeze(1)
+             
+        # Generate initial embeddings from the continuous value
+        embeddings = self.embedding_mlp(labels)
+
+        # Apply dropout logic for Classifier-Free Guidance (CFG)
+        use_dropout = self.dropout_prob > 0
+        
+        if (train and use_dropout) or (force_drop_ids is not None):
+            
+            if force_drop_ids is None:
+                # Determine which samples to drop based on dropout_prob
+                drop_ids = (
+                    torch.rand(B, device=labels.device) < self.dropout_prob
+                )
+            else:
+                drop_ids = force_drop_ids.bool()
+
+            # Broadcast the null embedding to the samples marked for dropout
+            null_broadcast = self.null_embedding.expand(B, self.hidden_size)
+            
+            # Replace the generated embeddings with the null embedding
+            embeddings[drop_ids] = null_broadcast[drop_ids]
+
+        return embeddings
 
 #################################################################################
 #                                 Core DiT Model                                #
@@ -252,7 +317,7 @@ class DiT(nn.Module):
         #     config.hidden_size,
         #     bias=True,
         # )
-        #NOTE Maybe? point transformer replace PatchEmbed
+        #NOTE  point transformer replaced PatchEmbed
         self.x_embedder = TransformerBlock(
             config.in_features,
             config.hidden_size,#config.transformer_features,
@@ -261,9 +326,16 @@ class DiT(nn.Module):
             )
 
         self.t_embedder = TimestepEmbedder(config.hidden_size)
-        if config.num_classes > 0:  # conditional generation
+        if config.num_classes > 0:  # conditional generation on particle labels
             self.y_embedder = LabelEmbedder(
                 config.num_classes, config.hidden_size, config.class_dropout_prob
+            )
+        if config.gap_classes > 0:  # conditional generation on gap
+            self.gap_embedder = LabelEmbedder(
+                config.gap_classes, config.hidden_size, config.class_dropout_prob
+            )
+        self.e_embedder = EnergyEmbedder(
+                config.hidden_size, config.class_dropout_prob
             )
         #FIXME initially not post emmbedding. Still need to figure out the equivalent in point transformer
         #num_patches = self.x_embedder.num_centroids
@@ -342,6 +414,18 @@ class DiT(nn.Module):
         # Initialize label embedding table:
         if hasattr(self, "y_embedder"):
             nn.init.normal_(self.y_embedder.embedding_table.weight, std=0.02)
+        if hasattr(self, "gap_embedder"):
+            nn.init.normal_(self.gap_embedder.embedding_table.weight, std=0.02)
+        if hasattr(self, "e_embedder"):
+            for layer in self.e_embedder.embedding_mlp:
+                if isinstance(layer, nn.Linear):
+                    # Use Xavier/Glorot for weights, often preferred for linear layers
+                    nn.init.xavier_uniform_(layer.weight)
+                    # Initialize bias to zero (if bias exists)
+                    if layer.bias is not None:
+                        nn.init.zeros_(layer.bias)              
+            # Initialize null embedding parameter
+            nn.init.normal_(self.e_embedder.null_embedding, std=0.02)
 
         # Initialize timestep embedding MLP:
         nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
@@ -425,13 +509,24 @@ class DiT(nn.Module):
         x= self.x_embedder(x)[0] # (points:(N,P,transformer_features))
         #x = (x_emb + self.pos_embed)  # (N, T, D), where T = H * W / patch_size ** 2
         
-        t = self.t_embedder(t)  # (N, D)
+        #t = self.t_embedder(t)  # (N, D)
+        c = self.t_embedder(t)  # c is (N, D)
+        #Sequentially add other embeddings to 'c'
         if hasattr(self, "y_embedder"):
-            y = self.y_embedder(y, self.training)  # (N, D)
-            c = t + y  # (N, D)
-        else:
-            c = t
+            y_emb = self.y_embedder(y, self.training)  # (N, D)
+            # Add the y embedding to the conditional vector 'c'
+            c = c + y_emb
+        if hasattr(self, "gap_embedder"):
+            gap_emb = self.gap_embedder(gap, self.training)  # (N, D)
+            # Add the gap embedding to the conditional vector 'c'
+            c = c + gap_emb
 
+        if hasattr(self, "e_embedder"):
+            energy_emb = self.e_embedder(energy, self.training)  # (N, D)
+            # Add the energy embedding conditional vector 'c'
+            c = c + energy_emb
+        
+        #'c' contains t + y (+ gap) (+ energy) 
         skips = []
         for idx, block in enumerate(self.in_blocks):
             x = block(x, c)  # (N, T, D)
