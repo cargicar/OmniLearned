@@ -34,6 +34,7 @@ from tqdm.auto import tqdm
 
 #from rectified_flow.models.dit import DiT, DiTConfig
 from rectified_flow.rectified_flow import RectifiedFlow
+from src.evaluate.evaluate_calopodit import MyEulerSampler
 
 logger = get_logger(__name__)
 
@@ -59,6 +60,20 @@ def parse_args():
         type=bool,
         default=True,
         help="Whether training 1-Rectified Flow",
+    )
+    parser.add_argument(
+        "--reflow",
+        type=bool,
+        default=False,
+        help="Whether training ReFlow",
+    )
+    parser.add_argument(
+        "--num_steps",
+        type=int,
+        default=100,
+        help=(
+            "Number of steps for generation. Used in training Reflow and/or evaluation"
+        ),
     )
     parser.add_argument(
         "--train_time_distribution",
@@ -358,7 +373,7 @@ class EMAModel:
 
 
 def main(args):
-    #FIXME and passing here to read max_particles from the args. Look for a way to do it from dataset
+    #NOTE passing here to read max_particles from the args. Look for a way to do it from dataset
     def pad_collate_fn(batch, max_particles=args.max_particles):
         """
         Custom collate function to handle batches of showers with varying numbers of particles.
@@ -538,7 +553,6 @@ def main(args):
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
 
-
     accelerator.print(f"Train dataset len: {len(train_dataloader)}")
     print("************")
 
@@ -601,9 +615,6 @@ def main(args):
     accelerator.register_save_state_pre_hook(save_model_hook)
     accelerator.register_load_state_pre_hook(load_model_hook)
 
-    model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-        model, optimizer, train_dataloader, lr_scheduler
-    )
 
     #FIXME features hardcoded
     data_shape = (args.max_particles,4)
@@ -619,6 +630,10 @@ def main(args):
         velocity_field=model,
         device=accelerator.device,
         dtype=weight_dtype,
+    )
+
+    model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+        model, optimizer, train_dataloader, lr_scheduler
     )
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
@@ -685,7 +700,13 @@ def main(args):
         desc="Steps",
         disable=not accelerator.is_local_main_process,  # Only show the progress bar once on each machine.
     )
-
+    #Sampling for Reflow
+    euler_sampler = MyEulerSampler(
+                            rectified_flow=rectified_flow,
+                            num_steps=args.num_steps,
+                            num_samples=batch_size,
+                            )
+    
     for epoch in range(first_epoch, args.num_train_epochs):
         model.train()
 
@@ -700,14 +721,32 @@ def main(args):
                 x_0 = rectified_flow.sample_source_distribution(X.shape[0])
                 t = rectified_flow.sample_train_time(X.shape[0])
                 t= t.squeeze() #FIXME it seems that rectified_flow adjust time shape to x already during sample_train and also during get_loss, which creates a bug
-                loss = rectified_flow.get_loss(
-                    x_0=x_0,
-                    x_1=X,
-                    y= y,
-                    gap= gap_pid,
-                    energy=energy,
-                    t=t,
-                )
+                #FIXME. It would improve performance if we dont load dataset during reflow
+                if args.reflow:
+                    with torch.no_grad():
+                        traj1 = euler_sampler.sample_loop(
+                        seed=233,
+                        y=y,
+                        gap= gap_pid,
+                        energy=energy,
+                        )
+                    loss = rectified_flow.get_loss(
+                        x_0=x_0,
+                        x_1=traj1.x_t,
+                        y= y,
+                        gap= gap_pid,
+                        energy=energy,
+                        t=t,
+                    )
+                else:
+                    loss = rectified_flow.get_loss(
+                        x_0=x_0,
+                        x_1=X,
+                        y= y,
+                        gap= gap_pid,
+                        energy=energy,
+                        t=t,
+                    )
 
                 accelerator.backward(loss)
 

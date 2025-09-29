@@ -516,7 +516,7 @@ def main(args):
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     
-        #FIXME, model trained without conditioning! 
+        plot_batch_3d(X, y, gap_pid, energy, title = "dataset")
     
     #FIXME features hardcoded
     data_shape = (args.max_particles,4)
