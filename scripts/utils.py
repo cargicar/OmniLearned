@@ -10,52 +10,149 @@ from torch.distributed import init_process_group, get_rank
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
-
-def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud"):
+def Ehistogram(X1, X2, y, gap, energy, spatial_dim=0, title="Ehistogram Comparison", bin_width=0.05):
     """
-    Plots each individual point cloud from a batch in a separate 3D scatter plot.
+    Plots two energy histograms on the same canvas for comparison.
 
     Args:
-        batch_of_point_clouds: A PyTorch tensor of shape (B, N, 3), where:
-            - B is the batch size (e.g., 128)
-            - N is the number of points (e.g., 2048)
-            - 3 represents the (x, y, z) coordinates
+        X1 (torch.Tensor): The first data tensor of shape (batch_size, num_particles, 4).
+        X2 (torch.Tensor): The second data tensor of shape (batch_size, num_particles, 4).
+        spatial_dim (int): The spatial dimension to use for binning (0 for x, 1 for y, 2 for z).
+        title (str): The title for the plot and the filename for saving.
+        bin_width (float): The width of each spatial bin.
     """
-    # Get the batch size
-    batch_size = batch_of_point_clouds.shape[0]
-    # Loop through each point cloud in the batch
-    for i in range(10):
-    #for i in range(num_samples):
-        # Extract the current point cloud tensor
-        # .detach() is used to remove it from the computation graph.
-        # .cpu() ensures the tensor is on the CPU.
-        # .numpy() converts the tensor to a NumPy array, which matplotlib requires.
+    # 1. X    
+    # energy1 = X1[:, :, 3].detach().cpu().numpy().flatten()
+    # x_positions1 = X1[:, :, spatial_dim].detach().cpu().numpy().flatten()
+    
+    # # 2. Generated
+    # energy2 = X2[:, :, 3].detach().cpu().numpy().flatten()
+    # x_positions2 = X2[:, :, spatial_dim].detach().cpu().numpy().flatten()
+    for i in range(min(10, X1.shape[0])):
+        category = int(y[i].detach().cpu().numpy())
+        gap_id = int(gap[i].detach().cpu().numpy())
+        Penergy = energy[i].detach().cpu().numpy()
+
+        #NOTE just use first point cloud
+        energy1 = X1[i, :, 3].detach().cpu().numpy().flatten()
+        x_positions1 = X1[0, :, spatial_dim].detach().cpu().numpy().flatten()
+        
+        # 2. Generated
+        energy2 = X2[i, :, 3].detach().cpu().numpy().flatten()
+        x_positions2 = X2[i, :, spatial_dim].detach().cpu().numpy().flatten()
+
+        # 3. Combine data to determine the global bin edges
+        all_x_positions = np.concatenate([x_positions1, x_positions2])
+        min_x = np.floor(all_x_positions.min() / bin_width) * bin_width
+        max_x = np.ceil(all_x_positions.max() / bin_width) * bin_width
+        bin_edges = np.arange(min_x, max_x + bin_width, bin_width)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+        # 4. Bin and sum energy for X1
+        total_energy1 = np.zeros(len(bin_edges) - 1)
+        bin_indices1 = np.digitize(x_positions1, bin_edges)
+        for i in range(len(x_positions1)):
+            if 0 < bin_indices1[i] <= len(total_energy1):
+                total_energy1[bin_indices1[i] - 1] += energy1[i]
+        
+        # 5. Bin and sum energy for X2
+        total_energy2 = np.zeros(len(bin_edges) - 1)
+        bin_indices2 = np.digitize(x_positions2, bin_edges)
+        for j in range(len(x_positions2)):
+            if 0 < bin_indices2[j] <= len(total_energy2):
+                total_energy2[bin_indices2[j] - 1] += energy2[j]
+
+        # 6. Plotting
+        plt.figure(figsize=(12, 7))
+
+        # Plot X1 data with a smaller offset
+        plt.bar(bin_centers - bin_width/4, total_energy1, width=bin_width/2, 
+                edgecolor='black', alpha=0.7, label='Dataset')
+
+        # Plot X2 data with a different offset and color
+        plt.bar(bin_centers + bin_width/4, total_energy2, width=bin_width/2, 
+                edgecolor='black', alpha=0.7, label='Generated', color='red')
+
+        plt.title(f'Total Energy vs. Position Bins - {title}')
+        plt.xlabel(f'Position along dimension {spatial_dim}')
+        plt.ylabel('Total Energy per bin')
+        plt.legend()
+        plt.grid(axis='y', linestyle='--', alpha=0.6)
+        plt.savefig(f"results/Ehisto_{title}_pcat_{category}_gcat_{gap_id}_energy_{Penergy:.2f}.png")
+
+def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud", exclude_too_small= True):
+    """
+    Plots each individual point cloud from a batch in a separate 3D scatter plot,
+    excluding points where (x, y, z) == (0, 0, 0).
+
+    Args:
+        batch_of_point_clouds: A PyTorch tensor of shape (B, N, 3).
+        cates, gaps, energies: Tensors containing corresponding metadata for each point cloud.
+    """
+    
+    # Loop through a maximum of 10 point clouds in the batch
+    # num_samples = batch_of_point_clouds.shape[0] # To plot the whole batch
+    for i in range(min(10, batch_of_point_clouds.shape[0])):
+        
+        # --- Data Preparation ---
+        
+        # Extract and convert the current point cloud tensor to a NumPy array
         point_cloud = batch_of_point_clouds[i].detach().cpu().numpy()
-        category = int(cates[i].detach().cpu().numpy())
-        gap = int(gaps[i].detach().cpu().numpy())
-        energy = energies[i].detach().cpu().numpy()
-        # Separate the coordinates for plotting
+        coords = point_cloud[:, :3]
+        threshold = 1e-2
         x = point_cloud[:, 0]
         y = point_cloud[:, 1]
         z = point_cloud[:, 2]
+        # Extract and convert metadata
+        category = int(cates[i].detach().cpu().numpy())
+        gap = int(gaps[i].detach().cpu().numpy())
+        energy = energies[i].detach().cpu().numpy()
+        # --- Filtering Step: Remove (0, 0, 0) points ---
+        # Create a boolean mask: True if ANY coordinate is non-zero
+        # np.set_printoptions(threshold=np.inf)
+        # xs = x.sort()
+        # ys = y.sort()
+        # zs = z.sort()
+        # print(f"X {x}")
+        # print(f"Y {y}")
+        # print(f"Z {z}")
+        if exclude_too_small:
+            # 1. Check which coordinates have an absolute value > threshold
+            too_small_mask = np.abs(coords) > threshold    
+            # 2. A point is flagged for REMOVAL if ANY of its (x, y, z) coords are too large.
+            mask = np.any(too_small_mask, axis=1)
+            # --------------------------------------------------------------------
+            # Apply the mask to keep only the small-coordinate points
+            filtered_coords = coords[mask]
+            x = filtered_coords[:, 0]
+            y = filtered_coords[:, 1]
+            z = filtered_coords[:, 2]
 
-        # Create a new figure and a 3D subplot for the current point cloud
+        # Check if the filtered point cloud is empty (highly unlikely but good practice)
+        if len(x) == 0:
+            print(f"Point Cloud {i+1} is empty after filtering (all points were 0,0,0). Skipping plot.")
+            continue
+            
+        # --- Plotting ---
+        
+        # Create a new figure and a 3D subplot
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(111, projection='3d')
 
-        # Plot the points
+        # Plot the filtered points
         ax.scatter(x, y, z, s=1)  # s is the marker size
 
         # Set axis labels and a title
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
-        ax.set_title(f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy}')
         
-        # Display the plot
-        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy}.png")
+        plot_title = f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy:.2f} ({len(x)} pts)'
+        ax.set_title(plot_title)
+        
+        # Display the plot and save
+        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy:.2f}.png")
         plt.close()
-
 
 def print_metrics(y_preds_np, y_np, thresholds=[0.3, 0.5], background_class=0):
     # Compute multiclass AUC

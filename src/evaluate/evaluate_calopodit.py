@@ -31,7 +31,7 @@ from tqdm.auto import tqdm
 from src.data.dataset import HDF5Dataset, PklDataset, ShapeNetCore 
 from src.data.transforms import MinMaxNormalize, CentroidNormalize, Compose
 from src.models.calopodit import DiT, DiTConfig
-from scripts.utils import plot_batch_3d
+from scripts.utils import plot_batch_3d, Ehistogram
 
 from rectified_flow.rectified_flow import RectifiedFlow
 from rectified_flow.samplers.base_sampler import Sampler
@@ -83,6 +83,14 @@ def parse_args():
         type=str,
         default="mse",
         help="Criterion for the rectified flow. Choose between ['mse', 'l1', 'lpips'].",
+    )
+    parser.add_argument(
+        "--num_steps",
+        type=int,
+        default=100,
+        help=(
+            "Number of steps for generatio."
+        ),
     )
     parser.add_argument(
         "--validation_epochs",
@@ -332,38 +340,6 @@ class MyEulerSampler(Sampler):
         """
         pass
 
-def plot_image_batch(images):
-    """
-    Plots a batch of images from a PyTorch tensor.
-    
-    Args:
-        images (torch.Tensor): A tensor of shape [B, C, H, W]
-    """
-    # Create a figure and a set of subplots
-    fig, axes = plt.subplots(1, images.shape[0], figsize=(10, 3))
-    
-    # Check if there's only one image in the batch and adjust axes
-    if images.shape[0] == 1:
-        axes = [axes]
-        
-    for i, ax in enumerate(axes):
-        # 1. Denormalize image from [-1, 1] to [0, 1]
-        img = images[i] / 2 + 0.5
-        
-        # 2. Permute the dimensions from [C, H, W] to [H, W, C]
-        img = img.permute(1, 2, 0)
-        
-        # 3. Convert to a NumPy array for plotting
-        np_img = img.detach().cpu().numpy()
-        
-        # Plot the image
-        ax.imshow(np_img)
-        ax.axis('off')  # Hide axes
-        ax.set_title(f'Sample {i+1}')
-    
-    plt.tight_layout()
-    plt.savefig(f"results/cifar_batch_{i}")
-
 def main(args):
     #FIXME and passing here to read max_particles from the args. Look for a way to do it from dataset
     def pad_collate_fn(batch, max_particles=args.max_particles):
@@ -446,7 +422,7 @@ def main(args):
                                     )
             model.load_state_dict(checkpoint)        
 
-
+    print(f"Resuming from checkpoint {path}")
     model.eval().requires_grad_(False)
 
     if args.validation: 
@@ -538,6 +514,8 @@ def main(args):
         iterdata = iter(val_loader)
         batch = next(iterdata)
         X, energy, y, gap_pid = batch
+        X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
+    
         #FIXME, model trained without conditioning! 
     
     #FIXME features hardcoded
@@ -555,10 +533,10 @@ def main(args):
         device=device,
         dtype=weight_dtype,
     )
-    with torch.no_grad():                 
+    with torch.no_grad():
         euler_sampler = MyEulerSampler(
             rectified_flow=rectified_flow,
-            num_steps=100, #FIXME Add parser flag
+            num_steps=args.num_steps,
             num_samples=args.sample_batch_size,
         )
 
@@ -571,6 +549,7 @@ def main(args):
             energy=energy,
             )
         pts= traj1.x_t
+        Ehistogram(X,pts, y, gap_pid, energy, title=f"Ehist_calopodit_1000")
         plot_batch_3d(pts, y, gap_pid, energy, title = "model sampler")
         
 if __name__ == "__main__":
