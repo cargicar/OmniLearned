@@ -462,19 +462,23 @@ def main(args):
         elif args.dataset == "ShapeNetCore":#shapenetcore
             dataset = ShapeNetCore(files_path)#TODO, transform=normalize_transform)
         
+               
         # Create DataLoaders for each subset
         batch_size = args.sample_batch_size
         val_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
 
         print(f"Val dataset len: {len(val_dataloader)}")
+        print(f"Val dataset len: {len(val_dataloader)}")
         print("************")
         # You can now use train_loader for training and val_loader for validation
 
+        iterdata = iter(val_dataloader)
         iterdata = iter(val_dataloader)
         batch = next(iterdata)
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     
+        #plot_batch_3d(X, y, gap_pid, energy, title = "dataset")
         #plot_batch_3d(X, y, gap_pid, energy, title = "dataset")
     
     #FIXME features hardcoded
