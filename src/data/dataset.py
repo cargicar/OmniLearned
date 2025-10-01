@@ -135,14 +135,12 @@ class PklDataset(Dataset):
             try:
                 with open(file_path, 'rb') as f:
                     data = pickle.load(f)
-                    
                 # Extract data from the dictionary. Use .pop() to get and remove
                 # the list from the dictionary.
                 showers = data['showers'].pop()
                 energies = data['energies'].pop()
                 pid = data['pid'].pop()
-                gap_pid = data['gap_pid'].pop()
-
+                gap_pid = data['gap_pid'].pop() 
                 # Add a sanity check to ensure the data is not empty and has matching lengths
                 if showers.size > 0 and len(showers) == len(energies):
                     self.all_showers.append(showers)
@@ -174,12 +172,14 @@ class PklDataset(Dataset):
         """
         if torch.is_tensor(idx):
             idx = idx.tolist()
-
+        #max_e = np.max(self.all_energies)
+        #min_e = np.min(self.all_energies)
+        #TODO read this from config file GenAi datageneration
+        max_e = 1000000
+        min_e = 1000
         # Retrieve the data from the pre-loaded arrays
         shower = self.all_showers[idx]
         #Normalize energy between 0 and 1
-        max_e = np.max(self.all_energies)
-        min_e = np.min(self.all_energies)
         energy = (self.all_energies[idx] - min_e) / (max_e-min_e)
         #energy = self.all_energies[idx]
         pid = self.all_pids[idx]

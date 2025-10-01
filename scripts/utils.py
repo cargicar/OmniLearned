@@ -9,10 +9,14 @@ import torch.distributed as dist
 from torch.distributed import init_process_group, get_rank
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
 
 def Ehistogram(X1, X2, y, gap, energy, spatial_dim=0, title="Ehistogram Comparison", bin_width=0.05):
     """
-    Plots two energy histograms on the same canvas for comparison.
+    Plots two energy histograms on the same canvas for comparison, 
+    aggregating data across all point clouds in the batch.
 
     Args:
         X1 (torch.Tensor): The first data tensor of shape (batch_size, num_particles, 4).
@@ -21,64 +25,142 @@ def Ehistogram(X1, X2, y, gap, energy, spatial_dim=0, title="Ehistogram Comparis
         title (str): The title for the plot and the filename for saving.
         bin_width (float): The width of each spatial bin.
     """
-    # 1. X    
-    # energy1 = X1[:, :, 3].detach().cpu().numpy().flatten()
-    # x_positions1 = X1[:, :, spatial_dim].detach().cpu().numpy().flatten()
+    # 1. X1 (Dataset) - Aggregate all batches
+    # X1[:, :, 3] selects all batch elements, all particles, and the 4th feature (energy).
+    # .flatten() combines the batch and particle dimensions.
+    energy1 = X1[:, :, 3].detach().cpu().numpy().flatten()
+    x_positions1 = X1[:, :, spatial_dim].detach().cpu().numpy().flatten()
     
-    # # 2. Generated
-    # energy2 = X2[:, :, 3].detach().cpu().numpy().flatten()
-    # x_positions2 = X2[:, :, spatial_dim].detach().cpu().numpy().flatten()
-    for i in range(min(10, X1.shape[0])):
-        category = int(y[i].detach().cpu().numpy())
-        gap_id = int(gap[i].detach().cpu().numpy())
-        Penergy = energy[i].detach().cpu().numpy()
+    # 2. X2 (Generated) - Aggregate all batches
+    energy2 = X2[:, :, 3].detach().cpu().numpy().flatten()
+    x_positions2 = X2[:, :, spatial_dim].detach().cpu().numpy().flatten()
 
-        #NOTE just use first point cloud
-        energy1 = X1[i, :, 3].detach().cpu().numpy().flatten()
-        x_positions1 = X1[0, :, spatial_dim].detach().cpu().numpy().flatten()
+    # The aggregation loop (for i in range(min(10, X1.shape[0])):) is removed.
+    # The subsequent code will now operate on the combined, flattened data.
+
+    # 3. Combine data to determine the global bin edges
+    all_x_positions = np.concatenate([x_positions1, x_positions2])
+    # Handle the case where all_x_positions might be empty (e.g., if X1/X2 is empty)
+    if all_x_positions.size == 0:
+        print("Warning: Input data (X1 or X2) is empty. Cannot generate histogram.")
+        return
         
-        # 2. Generated
-        energy2 = X2[i, :, 3].detach().cpu().numpy().flatten()
-        x_positions2 = X2[i, :, spatial_dim].detach().cpu().numpy().flatten()
+    min_x = np.floor(all_x_positions.min() / bin_width) * bin_width
+    max_x = np.ceil(all_x_positions.max() / bin_width) * bin_width
+    bin_edges = np.arange(min_x, max_x + bin_width, bin_width)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-        # 3. Combine data to determine the global bin edges
-        all_x_positions = np.concatenate([x_positions1, x_positions2])
-        min_x = np.floor(all_x_positions.min() / bin_width) * bin_width
-        max_x = np.ceil(all_x_positions.max() / bin_width) * bin_width
-        bin_edges = np.arange(min_x, max_x + bin_width, bin_width)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    # Check if we have any bins
+    if len(bin_centers) == 0:
+        print("Warning: Bin range is invalid. Cannot generate histogram.")
+        return
 
-        # 4. Bin and sum energy for X1
-        total_energy1 = np.zeros(len(bin_edges) - 1)
-        bin_indices1 = np.digitize(x_positions1, bin_edges)
-        for i in range(len(x_positions1)):
-            if 0 < bin_indices1[i] <= len(total_energy1):
-                total_energy1[bin_indices1[i] - 1] += energy1[i]
+    # 4. Bin and sum energy for X1
+    # Use np.histogram for efficient binning and summation
+    total_energy1, _ = np.histogram(x_positions1, bins=bin_edges, weights=energy1)
+
+    # 5. Bin and sum energy for X2
+    total_energy2, _ = np.histogram(x_positions2, bins=bin_edges, weights=energy2)
+
+    # 6. Plotting
+    plt.figure(figsize=(12, 7))
+
+    # Plot X1 data with a smaller offset
+    plt.bar(bin_centers - bin_width/4, total_energy1, width=bin_width/2, 
+            edgecolor='black', alpha=0.7, label='Dataset')
+
+    # Plot X2 data with a different offset and color
+    plt.bar(bin_centers + bin_width/4, total_energy2, width=bin_width/2, 
+            edgecolor='black', alpha=0.7, label='Generated', color='red')
+
+    # Extract single values for filename/title from the first batch element
+    # as before, assuming they are constant across the batch or we only care about the first one
+    category = int(y[0].detach().cpu().numpy())
+    gap_id = int(gap[0].detach().cpu().numpy())
+    Penergy = energy[0].detach().cpu().numpy()
+
+    plt.title(f'Total Energy vs. Position Bins (Aggregate) - {title}')
+    plt.xlabel(f'Position along dimension {spatial_dim}')
+    plt.ylabel('Total Energy per bin')
+    plt.legend()
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+    
+    # Ensure the 'results' directory exists before saving (if needed, add import os and os.makedirs)
+    # import os
+    # os.makedirs("results", exist_ok=True)
+    plt.savefig(f"results/Ehisto_{title}_pcat_{category}_gcat_{gap_id}_energy_{Penergy:.2f}_aggregate.png")
+    plt.close() # Close the figure to free up memory
+
+    
+# def Ehistogram(X1, X2, y, gap, energy, spatial_dim=0, title="Ehistogram Comparison", bin_width=0.05):
+#     """
+#     Plots two energy histograms on the same canvas for comparison.
+
+#     Args:
+#         X1 (torch.Tensor): The first data tensor of shape (batch_size, num_particles, 4).
+#         X2 (torch.Tensor): The second data tensor of shape (batch_size, num_particles, 4).
+#         spatial_dim (int): The spatial dimension to use for binning (0 for x, 1 for y, 2 for z).
+#         title (str): The title for the plot and the filename for saving.
+#         bin_width (float): The width of each spatial bin.
+#     """
+#     # 1. X    
+#     # energy1 = X1[:, :, 3].detach().cpu().numpy().flatten()
+#     # x_positions1 = X1[:, :, spatial_dim].detach().cpu().numpy().flatten()
+    
+#     # # 2. Generated
+#     # energy2 = X2[:, :, 3].detach().cpu().numpy().flatten()
+#     # x_positions2 = X2[:, :, spatial_dim].detach().cpu().numpy().flatten()
+#     for i in range(min(10, X1.shape[0])):
+#         category = int(y[i].detach().cpu().numpy())
+#         gap_id = int(gap[i].detach().cpu().numpy())
+#         Penergy = energy[i].detach().cpu().numpy()
+
+#         #NOTE just use first point cloud
+#         energy1 = X1[i, :, 3].detach().cpu().numpy().flatten()
+#         x_positions1 = X1[0, :, spatial_dim].detach().cpu().numpy().flatten()
         
-        # 5. Bin and sum energy for X2
-        total_energy2 = np.zeros(len(bin_edges) - 1)
-        bin_indices2 = np.digitize(x_positions2, bin_edges)
-        for j in range(len(x_positions2)):
-            if 0 < bin_indices2[j] <= len(total_energy2):
-                total_energy2[bin_indices2[j] - 1] += energy2[j]
+#         # 2. Generated
+#         energy2 = X2[i, :, 3].detach().cpu().numpy().flatten()
+#         x_positions2 = X2[i, :, spatial_dim].detach().cpu().numpy().flatten()
 
-        # 6. Plotting
-        plt.figure(figsize=(12, 7))
+#         # 3. Combine data to determine the global bin edges
+#         all_x_positions = np.concatenate([x_positions1, x_positions2])
+#         min_x = np.floor(all_x_positions.min() / bin_width) * bin_width
+#         max_x = np.ceil(all_x_positions.max() / bin_width) * bin_width
+#         bin_edges = np.arange(min_x, max_x + bin_width, bin_width)
+#         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-        # Plot X1 data with a smaller offset
-        plt.bar(bin_centers - bin_width/4, total_energy1, width=bin_width/2, 
-                edgecolor='black', alpha=0.7, label='Dataset')
+#         # 4. Bin and sum energy for X1
+#         total_energy1 = np.zeros(len(bin_edges) - 1)
+#         bin_indices1 = np.digitize(x_positions1, bin_edges)
+#         for i in range(len(x_positions1)):
+#             if 0 < bin_indices1[i] <= len(total_energy1):
+#                 total_energy1[bin_indices1[i] - 1] += energy1[i]
+        
+#         # 5. Bin and sum energy for X2
+#         total_energy2 = np.zeros(len(bin_edges) - 1)
+#         bin_indices2 = np.digitize(x_positions2, bin_edges)
+#         for j in range(len(x_positions2)):
+#             if 0 < bin_indices2[j] <= len(total_energy2):
+#                 total_energy2[bin_indices2[j] - 1] += energy2[j]
 
-        # Plot X2 data with a different offset and color
-        plt.bar(bin_centers + bin_width/4, total_energy2, width=bin_width/2, 
-                edgecolor='black', alpha=0.7, label='Generated', color='red')
+#         # 6. Plotting
+#         plt.figure(figsize=(12, 7))
 
-        plt.title(f'Total Energy vs. Position Bins - {title}')
-        plt.xlabel(f'Position along dimension {spatial_dim}')
-        plt.ylabel('Total Energy per bin')
-        plt.legend()
-        plt.grid(axis='y', linestyle='--', alpha=0.6)
-        plt.savefig(f"results/Ehisto_{title}_pcat_{category}_gcat_{gap_id}_energy_{Penergy:.2f}.png")
+#         # Plot X1 data with a smaller offset
+#         plt.bar(bin_centers - bin_width/4, total_energy1, width=bin_width/2, 
+#                 edgecolor='black', alpha=0.7, label='Dataset')
+
+#         # Plot X2 data with a different offset and color
+#         plt.bar(bin_centers + bin_width/4, total_energy2, width=bin_width/2, 
+#                 edgecolor='black', alpha=0.7, label='Generated', color='red')
+
+#         plt.title(f'Total Energy vs. Position Bins - {title}')
+#         plt.xlabel(f'Position along dimension {spatial_dim}')
+#         plt.ylabel('Total Energy per bin')
+#         plt.legend()
+#         plt.grid(axis='y', linestyle='--', alpha=0.6)
+#         plt.savefig(f"results/Ehisto_{title}_pcat_{category}_gcat_{gap_id}_energy_{Penergy:.2f}.png")
 
 def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud", exclude_too_small= True):
     """

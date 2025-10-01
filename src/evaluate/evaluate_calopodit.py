@@ -104,13 +104,15 @@ def parse_args():
     parser.add_argument(
         "--data_root",
         type=str,
-        default="/data/ccardona/datasets/G4_individual_sims_pkl_test",
+        default="/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test",
+        #default="/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_val",
         help="The root directory where the CIFAR-10 dataset is stored.",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/data/ccardona/models/G4",
+        #default="/data/ccardona/models/G4",
+        default="/pscratch/sd/c/ccardona/models/G4",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
     parser.add_argument(
@@ -460,63 +462,20 @@ def main(args):
         elif args.dataset == "ShapeNetCore":#shapenetcore
             dataset = ShapeNetCore(files_path)#TODO, transform=normalize_transform)
         
-        
-                
-        # Define the split ratios
-        train_ratio = 0.8
-        val_ratio = 0.1
-        test_ratio = 0.1
-
-
-        # Calculate the number of samples for each split
-        num_events = len(dataset)
-        num_train = int(num_events * train_ratio)
-        num_val = int(num_events * val_ratio)
-        num_test = num_events - num_train - num_val
-
-        # Use random_split to create the subsets
-        train_dataset, val_dataset, test_dataset = random_split(
-            dataset, [num_train, num_val, num_test]
-        )
-
-        print(f"\nDataset split into:")
-        print(f"  Training set: {len(train_dataset)} events")
-        print(f"  Validation set: {len(val_dataset)} events")
-        print(f"  Test set: {len(test_dataset)} events")
-
         # Create DataLoaders for each subset
-        batch_size = args.train_batch_size
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
-        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
-        test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
+        batch_size = args.sample_batch_size
+        val_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
 
-
-        print(f"Train dataset len: {len(train_dataloader)}")
+        print(f"Val dataset len: {len(val_dataloader)}")
         print("************")
-
-        batch_size= args.sample_batch_size
-
-        # Create DataLoaders
-        train_loader = DataLoader(
-            train_dataset, 
-            batch_size=batch_size, 
-            shuffle=True
-        )
-
-        val_loader = DataLoader(
-            val_dataset, 
-            batch_size=batch_size, 
-            shuffle=False
-        )
-
         # You can now use train_loader for training and val_loader for validation
 
-        iterdata = iter(val_loader)
+        iterdata = iter(val_dataloader)
         batch = next(iterdata)
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
     
-        plot_batch_3d(X, y, gap_pid, energy, title = "dataset")
+        #plot_batch_3d(X, y, gap_pid, energy, title = "dataset")
     
     #FIXME features hardcoded
     data_shape = (args.max_particles,4)
@@ -550,7 +509,7 @@ def main(args):
             )
         pts= traj1.x_t
         Ehistogram(X,pts, y, gap_pid, energy, title=f"Ehist_calopodit_1000")
-        plot_batch_3d(pts, y, gap_pid, energy, title = "model sampler")
+        #plot_batch_3d(pts, y, gap_pid, energy, title = "model sampler")
         
 if __name__ == "__main__":
     args = parse_args()
