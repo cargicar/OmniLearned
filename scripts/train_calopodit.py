@@ -34,7 +34,8 @@ from tqdm.auto import tqdm
 
 #from rectified_flow.models.dit import DiT, DiTConfig
 from rectified_flow.rectified_flow import RectifiedFlow
-from src.evaluate.evaluate_calopodit import MyEulerSampler
+from rectified_flow.samplers import EulerSampler
+#from src.evaluate.evaluate_calopodit import MyEulerSampler
 
 logger = get_logger(__name__)
 
@@ -213,7 +214,7 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=1e-4,
+        default=1e-5,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
@@ -701,7 +702,7 @@ def main(args):
         disable=not accelerator.is_local_main_process,  # Only show the progress bar once on each machine.
     )
     #Sampling for Reflow
-    euler_sampler = MyEulerSampler(
+    euler_sampler = EulerSampler(
                             rectified_flow=rectified_flow,
                             num_steps=args.num_steps,
                             num_samples=batch_size,
@@ -729,10 +730,10 @@ def main(args):
                         y=y,
                         gap= gap_pid,
                         energy=energy,
-                        )
+                        ).trajectories[-1]
                     loss = rectified_flow.get_loss(
                         x_0=x_0,
-                        x_1=traj1.x_t,
+                        x_1=traj1,
                         y= y,
                         gap= gap_pid,
                         energy=energy,
