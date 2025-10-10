@@ -130,13 +130,13 @@ def parse_args():
     parser.add_argument(
         "--data_root",
         type=str,
-        default="/data/ccardona/datasets",
+        default="/pscratch/sd/c/ccardona/datasets",
         help="The root directory where the CIFAR-10 dataset is stored.",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/data/ccardona/models/reshaper-dit",
+        default="/pscratch/sd/c/ccardona/models/reshaper-dit",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
     parser.add_argument(
@@ -194,7 +194,7 @@ def parse_args():
     parser.add_argument(
         "--checkpointing_steps",
         type=int,
-        default=20_000,
+        default=10_000,
         help=(
             "Save a checkpoint of the training state every X updates. These checkpoints can be used both as final"
             " checkpoints in case they are better than the last checkpoint, and are also suitable for resuming"
@@ -210,7 +210,7 @@ def parse_args():
     parser.add_argument(
         "--resume_from_checkpoint",
         type=str,
-        default=None,
+        default="latest",
         help=(
             "Whether training should be resumed from a previous checkpoint. Use a path saved by"
             ' `--checkpointing_steps`, or `"latest"` to automatically select the last available checkpoint.'
@@ -322,7 +322,7 @@ def parse_args():
     parser.add_argument(
         "--report_to",
         type=str,
-        default="wandb",
+        default="tensorboard",
         help=(
             'The integration to report the results and logs to. Supported platforms are `"tensorboard"`'
             ' (default), `"wandb"` and `"comet_ml"`. Use `"all"` to report to all integrations.'

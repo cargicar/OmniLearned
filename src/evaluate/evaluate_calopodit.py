@@ -104,8 +104,7 @@ def parse_args():
     parser.add_argument(
         "--data_root",
         type=str,
-        default="/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_test",
-        #default="/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_val",
+        default="/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_e_gamma",
         help="The root directory where the CIFAR-10 dataset is stored.",
     )
     parser.add_argument(
@@ -477,10 +476,8 @@ def main(args):
         batch = next(iterdata)
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
-    
-        #plot_batch_3d(X, y, gap_pid, energy, title = "dataset")
-        #plot_batch_3d(X, y, gap_pid, energy, title = "dataset")
-    
+        plot_batch_3d(X, y, gap_pid, energy, title = "Dataset")
+        
     #FIXME features hardcoded
     data_shape = (args.max_particles,4)
     # wrap up rectified_flow after accelerator.prepare
@@ -512,8 +509,8 @@ def main(args):
             energy=energy,
             )
         pts= traj1.x_t
-        Ehistogram(X,pts, y, gap_pid, energy, title=f"Ehist_calopodit_1000")
-        #plot_batch_3d(pts, y, gap_pid, energy, title = "model sampler")
+        #Ehistogram(X,pts, y, gap_pid, energy, title=f"Ehist_calopodit_del")
+        plot_batch_3d(pts, y, gap_pid, energy, title = "Model sampler")
         
 if __name__ == "__main__":
     args = parse_args()

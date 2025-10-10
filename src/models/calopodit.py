@@ -40,6 +40,7 @@ class DiTConfig:
     transformer_features: int = 32
     out_channels: int = 4
     name: str = "calopodit"
+    energy_cond: bool = True
     num_points: int = 500
     num_classes: int = 2
     gap_classes: int = 4
@@ -324,7 +325,7 @@ class DiT(nn.Module):
             config.hidden_size,
             config.k,
             )
-
+        
         self.t_embedder = TimestepEmbedder(config.hidden_size)
         if config.num_classes > 0:  # conditional generation on particle labels
             self.y_embedder = LabelEmbedder(
@@ -334,7 +335,8 @@ class DiT(nn.Module):
             self.gap_embedder = LabelEmbedder(
                 config.gap_classes, config.hidden_size, config.class_dropout_prob
             )
-        self.e_embedder = EnergyEmbedder(
+        if config.energy_cond:
+            self.e_embedder = EnergyEmbedder(
                 config.hidden_size, config.class_dropout_prob
             )
         #FIXME initially not post emmbedding. Still need to figure out the equivalent in point transformer

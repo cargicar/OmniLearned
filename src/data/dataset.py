@@ -223,7 +223,7 @@ int_classes = {'Airplane': 0, 'Bag': 1, 'Basket': 2, 'Bathtub': 3, 'Bed': 4, 'Be
 
 class ShapeNetCore(Dataset):
 
-    def __init__(self, path, cates, split, scale_mode, transform=None):
+    def __init__(self, path, cates, split, scale_mode, max_num_points = 3000, transform=None):
         super().__init__()
         assert isinstance(cates, list), '`cates` must be a list of cate names.'
         assert split in ('train', 'val', 'test')
@@ -234,6 +234,7 @@ class ShapeNetCore(Dataset):
         self.scale_mode = scale_mode
         self.transform = transform
         self.stats = None
+        self.max_num_points = max_num_points   
         
         # Load the split JSON file
         split_path = os.path.join(self.path, f'{self.split}_split.json')
@@ -317,10 +318,8 @@ class ShapeNetCore(Dataset):
         
         # Load the point cloud from the .npy file
         pc = torch.from_numpy(np.load(file_path))
-        
-        #FIXME
         # Define a fixed number of points for all point clouds
-        num_points = 1000  # You can adjust this value
+        num_points = self.max_num_points # You can adjust this value
 
         # Sample or pad the point cloud to the fixed size
         if pc.shape[0] > num_points:
@@ -356,11 +355,11 @@ class ShapeNetCore(Dataset):
         pc = (pc - shift) / scale
 
         data = {
-            'pointcloud': pc,
-            'cate': int_classes[cate_name],
+            'X': pc,
+            'y': int_classes[cate_name],
             'id': idx, # Use index as a unique ID for this split
-            'shift': shift,
-            'scale': scale
+            #'shift': shift,
+            #'scale': scale
         }
 
         # Apply any optional external transforms

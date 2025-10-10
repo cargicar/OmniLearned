@@ -106,13 +106,15 @@ def parse_args():
     parser.add_argument(
         "--data_root",
         type=str,
-        default="/data/ccardona/datasets/G4_individual_sims_pkl_test",
+        #default = "/global/cfs/cdirs/m3246/hep_ai/G4_individual_sims_pkl_test",
+        default="/pscratch/sd/c/ccardona/datasets/shapenetCore",
         help="The root directory where the dataset is stored.",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/data/ccardona/models/G4",
+        #default="pscratch/sd/c/ccardona/models/G4",
+        default="/pscratch/sd/c/ccardona/models/shapenet",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
     parser.add_argument(
@@ -135,7 +137,7 @@ def parse_args():
     parser.add_argument(
         "--max_particles",
         type=int,
-        default=1024,
+        default=1000,
         help=(
             "The maximun number of particles in each point cloud"
         ),
@@ -150,6 +152,38 @@ def parse_args():
         type=int,
         default=64,
         help="Batch size (per device) for the training dataloader.",
+    )
+    parser.add_argument(
+        "--num_classes",
+        type=int,
+        default=2,
+        help="Number of updates steps to accumulate before performing a backward/update pass.",
+    )
+    parser.add_argument(
+        "--gap_classes",
+        type=int,
+        default=4,
+        help="Number of updates steps to accumulate before performing a backward/update pass.",
+    )
+    
+    parser.add_argument(
+        "--no_energy_cond",  # <-- Renamed the argument for clarity
+        action="store_false",
+        dest="energy_cond",  # <-- Tell argparse to save the result to args.energy_cond
+        default=True,
+        help="Flag to disable conditioning on the energy of each point (sets energy_cond to False).",
+    )
+    parser.add_argument(
+        "--in_features",
+        type=int,
+        default=4,
+        help="Number of updates steps to accumulate before performing a backward/update pass.",
+    )
+    parser.add_argument(
+        "--out_channels",
+        type=int,
+        default=4,
+        help="Number of updates steps to accumulate before performing a backward/update pass.",
     )
     parser.add_argument(
         "--mixed_precision",
@@ -463,13 +497,13 @@ def main(args):
         nblocks =  4,
         name= "calopodit",
         num_points = args.max_particles,
-        #num_centroids = 128,
-        in_features=4,
+        energy_cond = args.energy_cond,
+        in_features=args.in_features,
         transformer_features = 128, #512 = hidden_size in current implementation
         #DiT config
-        num_classes = 2,
-        gap_classes = 4,
-        out_channels=4,
+        num_classes = args.num_classes,
+        gap_classes = args.gap_classes if hasattr(args, 'gap_classes') else None,
+        out_channels=args.out_channels,
         hidden_size=128,
         depth=13,
         num_heads=8,
@@ -495,34 +529,40 @@ def main(args):
     files_path = args.data_root
     if args.dataset == "G4_pkl":#pkl
         dataset = PklDataset(files_path)
+        #Transforms
+        #TODO read from detector geometries (?)
+        min_vals = dataset.all_showers.min(axis=(0,1))
+        max_vals = dataset.all_showers.max(axis=(0,1))
+        # 4. Create the normalization transform object with these values        
+        centroid_transform = CentroidNormalize()
+        minmax_transform = MinMaxNormalize(min_vals, max_vals)
+
+        composed_transform = Compose([
+                            centroid_transform,
+                            minmax_transform
+                            ])
+
+        dataset = PklDataset(files_path, transform=composed_transform)
+        collate_fn=pad_collate_fn
+
     elif args.dataset == "G4_h5":#h5
         dataset = HDF5Dataset(files_path)
+        collate_fn=None
     elif args.dataset == "ShapeNetCore":#shapenetcore
-        dataset = ShapeNetCore(files_path)
+        # python scripts/train_calopodit.py --dataset ShapeNetCore --num_classes 54 --gap_classes 0 --no_energy_cond --out_channels 3 --in_features 3 --max_particles 3000
+        cates = ['Airplane', 'Bag', 'Basket', 'Bathtub', 'Bed', 'Bench', 'Bottle', 'Bowl', 'Bus', 'Cabinet', 'Can', 'Camera', 'Cap', 'Car', 'Chair', 'Clock', 'Dishwasher', 'Monitor', 'Table', 'Telephone', 'Tin_can', 'Tower', 'Train', 'Keyboard', 'Earphone', 'Faucet', 'File', 'Guitar', 'Helmet', 'Jar', 'Knife', 'Lamp', 'Laptop', 'Speaker', 'Mailbox', 'Microphone', 'Microwave', 'Motorcycle', 'Mug', 'Piano', 'Pillow', 'Pistol', 'Pot', 'Printer', 'Remote_control', 'Rifle', 'Rocket', 'Skateboard', 'Sofa', 'Stove', 'Vessel', 'Washer', 'Cellphone', 'Birdhouse', 'Bookshelf']
+        train_dataset = ShapeNetCore(files_path, cates, max_num_points= args.max_particles, scale_mode='shape_unit', split='train', transform=None)
+        val_dataset = ShapeNetCore(files_path, cates, max_num_points= args.max_particles, scale_mode='shape_unit', split='val', transform=None)
+        test_dataset = ShapeNetCore(files_path, cates, max_num_points= args.max_particles, scale_mode='shape_unit', split='test', transform=None)
+        collate_fn=None
     
-
-    #Transforms
-    #TODO read from detector geometries (?)
-    min_vals = dataset.all_showers.min(axis=(0,1))
-    max_vals = dataset.all_showers.max(axis=(0,1))
-    # 4. Create the normalization transform object with these values
-    
-    centroid_transform = CentroidNormalize()
-    minmax_transform = MinMaxNormalize(min_vals, max_vals)
-
-    composed_transform = Compose([
-                        centroid_transform,
-                        minmax_transform
-                        ])
-
-    # Transformed dataset.
-    if args.dataset == "G4_pkl":#pkl # Change name to anything if you wnat to unnormalized quickly
-        dataset = PklDataset(files_path, transform=composed_transform)
-    elif args.dataset == "G4_h5":#h5
-        dataset = HDF5Dataset(files_path) #TODO, transform=normalize_transform)
-    elif args.dataset == "ShapeNetCore":#shapenetcore
-        dataset = ShapeNetCore(files_path)#TODO, transform=normalize_transform)
-    
+    # Use random_split to create the subsets
+    if args.dataset != "ShapeNetCore":
+        train_dataset, val_dataset, test_dataset = random_split(
+            dataset, [num_train, num_val, num_test]
+        )
+    else:
+        dataset = train_dataset
     
     accelerator.print(f"Successfully loaded dataset with {len(dataset)} total events.")
         
@@ -538,11 +578,6 @@ def main(args):
     num_val = int(num_events * val_ratio)
     num_test = num_events - num_train - num_val
 
-    # Use random_split to create the subsets
-    train_dataset, val_dataset, test_dataset = random_split(
-        dataset, [num_train, num_val, num_test]
-    )
-
     print(f"\nDataset split into:")
     print(f"  Training set: {len(train_dataset)} events")
     print(f"  Validation set: {len(val_dataset)} events")
@@ -550,9 +585,11 @@ def main(args):
 
     # Create DataLoaders for each subset
     batch_size = args.train_batch_size
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)#, num_workers=args.num_workers)
+
+    
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)#, num_workers=args.num_workers)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)#, num_workers=args.num_workers)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)#, num_workers=args.num_workers)
 
     accelerator.print(f"Train dataset len: {len(train_dataloader)}")
     print("************")
@@ -616,9 +653,7 @@ def main(args):
     accelerator.register_save_state_pre_hook(save_model_hook)
     accelerator.register_load_state_pre_hook(load_model_hook)
 
-
-    #FIXME features hardcoded
-    data_shape = (args.max_particles,4)
+    data_shape = (args.max_particles,args.in_features)  # (N, 4) 4 for (x,y,z,energy)
     # wrap up rectified_flow after accelerator.prepare
     rectified_flow = RectifiedFlow(
         data_shape=data_shape,
@@ -713,12 +748,16 @@ def main(args):
 
         for step, batch in enumerate(train_dataloader):
             models_to_accumulate = [model]
-            
             with accelerator.accumulate(models_to_accumulate):
-                X, energy, y, gap_pid = batch
-                #X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
-                #FIXME Using two categories for develpment purposes
-                y = (y == 2).long()
+                if args.dataset == "ShapeNetCore":#shapenetcore
+                    X, y = batch['X'], batch['y'] # X; {B, N, 3}, energy: {B,}, y: {B,}
+                    energy = None
+                    gap_pid = None 
+                else:
+                    X, energy, y, gap_pid = batch # X; {B, N, 4}, energy: {B,}, y: {B,}, gap_pid: {B,}
+                    #X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
+                    #FIXME Using two categories for develpment purposes
+                    y = (y == 2).long()
                 x_0 = rectified_flow.sample_source_distribution(X.shape[0])
                 t = rectified_flow.sample_train_time(X.shape[0])
                 t= t.squeeze() #FIXME it seems that rectified_flow adjust time shape to x already during sample_train and also during get_loss, which creates a bug
