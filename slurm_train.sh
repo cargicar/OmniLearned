@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=Dit_shapenet
 #SBATCH --nodes=1
-#SBATCH --time=08:00:00
+#SBATCH --time=10:00:00
 #SBATCH --constraint=gpu
 #SBATCH --gpus=4
 #SBATCH --qos=regular
@@ -15,5 +15,5 @@ module load conda
 conda activate omnilearned
 module load pytorch
 #srun torchrun --nproc_per_node=4 scripts/train_DiT.py 
-srun torchrun --nproc_per_node=4 scripts/train_calopodit.py --dataset ShapeNetCore --num_classes 54 --gap_classes 0 --no_energy_cond --out_channels 3 --in_features 3 --max_particles 3000
+srun torchrun --nproc_per_node=4 scripts/train_calopodit.py --dataset ShapeNetCore --num_classes 4 --gap_classes 0 --no_energy_cond --out_channels 3 --in_features 3 --max_particles 2000
 

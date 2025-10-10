@@ -162,7 +162,7 @@ def Ehistogram(X1, X2, y, gap, energy, spatial_dim=0, title="Ehistogram Comparis
 #         plt.grid(axis='y', linestyle='--', alpha=0.6)
 #         plt.savefig(f"results/Ehisto_{title}_pcat_{category}_gcat_{gap_id}_energy_{Penergy:.2f}.png")
 
-def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, title="pointcloud", exclude_too_small= True):
+def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps= None, energies= None, title="pointcloud", exclude_too_small= False):
     """
     Plots each individual point cloud from a batch in a separate 3D scatter plot,
     excluding points where (x, y, z) == (0, 0, 0).
@@ -187,8 +187,10 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
         z = point_cloud[:, 2]
         # Extract and convert metadata
         category = int(cates[i].detach().cpu().numpy())
-        gap = int(gaps[i].detach().cpu().numpy())
-        energy = energies[i].detach().cpu().numpy()
+        if gaps is not None:
+            gap = int(gaps[i].detach().cpu().numpy())
+        if energies is not None:
+            energy = energies[i].detach().cpu().numpy()
         # --- Filtering Step: Remove (0, 0, 0) points ---
         # Create a boolean mask: True if ANY coordinate is non-zero
         # np.set_printoptions(threshold=np.inf)
@@ -228,12 +230,15 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps, energies, ti
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
-        
-        plot_title = f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy:.2f} ({len(x)} pts)'
+        if gaps is not None and energies is not None:
+            plot_title = f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy:.2f} ({len(x)} pts)'
+            plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy:.2f}.png")
+        plot_title = f'Point Cloud {i+1}, ({len(x)} pts)'
+        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}.png")
         ax.set_title(plot_title)
         
         # Display the plot and save
-        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy:.2f}.png")
+        
         plt.close()
 
 def print_metrics(y_preds_np, y_np, thresholds=[0.3, 0.5], background_class=0):

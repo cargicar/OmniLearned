@@ -26,6 +26,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from src.data.dataset import HDF5Dataset, PklDataset, ShapeNetCore 
 from src.data.transforms import MinMaxNormalize, CentroidNormalize, Compose
 from src.models.calopodit import DiT, DiTConfig
+from scripts.utils import plot_batch_3d
 
 from diffusers.optimization import get_scheduler
 
@@ -35,7 +36,7 @@ from tqdm.auto import tqdm
 #from rectified_flow.models.dit import DiT, DiTConfig
 from rectified_flow.rectified_flow import RectifiedFlow
 from rectified_flow.samplers import EulerSampler
-#from src.evaluate.evaluate_calopodit import MyEulerSampler
+from rectified_flow.samplers.base_sampler import Sampler
 
 logger = get_logger(__name__)
 
@@ -174,6 +175,13 @@ def parse_args():
         help="Flag to disable conditioning on the energy of each point (sets energy_cond to False).",
     )
     parser.add_argument(
+        "--no_train",  # <-- Renamed the argument for clarity
+        action="store_false",
+        dest="train",  # <-- Tell argparse to save the result to args.energy_cond
+        default=True,
+        help="Flag to disable conditioning on the energy of each point (sets energy_cond to False).",
+    )
+    parser.add_argument(
         "--in_features",
         type=int,
         default=4,
@@ -248,7 +256,7 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=1e-5,
+        default=1e-4,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
@@ -406,6 +414,25 @@ class EMAModel:
                 param.data.copy_(self.shadow[name].data)
 
 
+class MyEulerSampler(Sampler):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def step(self, **model_kwargs):
+        # Extract the current time, next time point, and current state
+        t, t_next, x_t = self.t, self.t_next, self.x_t
+        # Compute the velocity field at the current state and time
+        v_t = self.rectified_flow.get_velocity(x_t=x_t, t=t, **model_kwargs)
+        
+        # Update the state using the Euler formula
+        self.x_t = x_t + (t_next - t) * v_t
+     
+    def record(self):
+        """
+        Overrides the base class method to prevent recording trajectories.
+        """
+        pass
+
 
 def main(args):
     #NOTE passing here to read max_particles from the args. Look for a way to do it from dataset
@@ -512,12 +539,11 @@ def main(args):
         final_conv=False,
     )
     model = DiT(DiT_config)
-
     model.to(accelerator.device, dtype=weight_dtype)
-    model.train().requires_grad_(True)
-
-    if args.use_ema:
-        model_ema = EMAModel(model)
+    if args.train:
+        model.train().requires_grad_(True)
+    else:
+        model.eval().requires_grad_(False)
 
     # 2. Prepare datasets
     logger.info("***l***  preparing datasets  ******")
@@ -550,7 +576,7 @@ def main(args):
         collate_fn=None
     elif args.dataset == "ShapeNetCore":#shapenetcore
         # python scripts/train_calopodit.py --dataset ShapeNetCore --num_classes 54 --gap_classes 0 --no_energy_cond --out_channels 3 --in_features 3 --max_particles 3000
-        cates = ['Airplane', 'Bag', 'Basket', 'Bathtub', 'Bed', 'Bench', 'Bottle', 'Bowl', 'Bus', 'Cabinet', 'Can', 'Camera', 'Cap', 'Car', 'Chair', 'Clock', 'Dishwasher', 'Monitor', 'Table', 'Telephone', 'Tin_can', 'Tower', 'Train', 'Keyboard', 'Earphone', 'Faucet', 'File', 'Guitar', 'Helmet', 'Jar', 'Knife', 'Lamp', 'Laptop', 'Speaker', 'Mailbox', 'Microphone', 'Microwave', 'Motorcycle', 'Mug', 'Piano', 'Pillow', 'Pistol', 'Pot', 'Printer', 'Remote_control', 'Rifle', 'Rocket', 'Skateboard', 'Sofa', 'Stove', 'Vessel', 'Washer', 'Cellphone', 'Birdhouse', 'Bookshelf']
+        cates = ['Airplane', 'Bag', 'Basket', 'Bathtub']
         train_dataset = ShapeNetCore(files_path, cates, max_num_points= args.max_particles, scale_mode='shape_unit', split='train', transform=None)
         val_dataset = ShapeNetCore(files_path, cates, max_num_points= args.max_particles, scale_mode='shape_unit', split='val', transform=None)
         test_dataset = ShapeNetCore(files_path, cates, max_num_points= args.max_particles, scale_mode='shape_unit', split='test', transform=None)
@@ -585,15 +611,16 @@ def main(args):
 
     # Create DataLoaders for each subset
     batch_size = args.train_batch_size
-
+    sample_size = args.sample_batch_size
     
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)#, num_workers=args.num_workers)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)#, num_workers=args.num_workers)
+    val_dataloader = DataLoader(val_dataset, batch_size=sample_size, shuffle=False, collate_fn=collate_fn)#, num_workers=args.num_workers)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)#, num_workers=args.num_workers)
 
     accelerator.print(f"Train dataset len: {len(train_dataloader)}")
+    print(f"learning rate: {args.learning_rate}")
     print("************")
-
+    
 
     # 3. Prepare optimizers
     model_params_with_lr = {"params": model.parameters(), "lr": args.learning_rate}
@@ -668,8 +695,8 @@ def main(args):
         dtype=weight_dtype,
     )
 
-    model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-        model, optimizer, train_dataloader, lr_scheduler
+    model, optimizer, train_dataloader, val_dataloader, lr_scheduler = accelerator.prepare(
+        model, optimizer, train_dataloader, val_dataloader, lr_scheduler
     )
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
@@ -736,17 +763,118 @@ def main(args):
         desc="Steps",
         disable=not accelerator.is_local_main_process,  # Only show the progress bar once on each machine.
     )
-    #Sampling for Reflow
-    euler_sampler = EulerSampler(
-                            rectified_flow=rectified_flow,
-                            num_steps=args.num_steps,
-                            num_samples=batch_size,
-                            )
     
-    for epoch in range(first_epoch, args.num_train_epochs):
-        model.train()
+    if args.train:
+        for epoch in range(first_epoch, args.num_train_epochs):
+            model.train()
 
-        for step, batch in enumerate(train_dataloader):
+            for step, batch in enumerate(train_dataloader):
+                models_to_accumulate = [model]
+                with accelerator.accumulate(models_to_accumulate):
+                    if args.dataset == "ShapeNetCore":#shapenetcore
+                        X, y = batch['X'], batch['y'] # X; {B, N, 3}, energy: {B,}, y: {B,}
+                        energy = None
+                        gap_pid = None 
+                    else:
+                        X, energy, y, gap_pid = batch # X; {B, N, 4}, energy: {B,}, y: {B,}, gap_pid: {B,}
+                        #X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
+                        #FIXME Using two categories for develpment purposes
+                        y = (y == 2).long()
+                    x_0 = rectified_flow.sample_source_distribution(X.shape[0])
+                    t = rectified_flow.sample_train_time(X.shape[0])
+                    t= t.squeeze() #FIXME it seems that rectified_flow adjust time shape to x already during sample_train and also during get_loss, which creates a bug
+                    #FIXME. It would improve performance if we dont load dataset during reflow
+                    # if args.reflow:
+                    #     with torch.no_grad():
+                    #         traj1 = euler_sampler.sample_loop(
+                    #         seed=233,
+                    #         y=y,
+                    #         gap= gap_pid,
+                    #         energy=energy,
+                    #         ).trajectories[-1]
+                    #     loss = rectified_flow.get_loss(
+                    #         x_0=x_0,
+                    #         x_1=traj1,
+                    #         y= y,
+                    #         gap= gap_pid,
+                    #         energy=energy,
+                    #         t=t,
+                    #     )
+                    # else:
+                    loss = rectified_flow.get_loss(
+                        x_0=x_0,
+                        x_1=X,
+                        y= y,
+                        gap= gap_pid,
+                        energy=energy,
+                        t=t,
+                    )
+
+                    accelerator.backward(loss)
+
+                    optimizer.step()
+                    lr_scheduler.step()
+                    optimizer.zero_grad()
+
+                if accelerator.sync_gradients:
+                    progress_bar.update(1)
+                    global_step += 1
+
+                    if args.use_ema:
+                        model_ema.update()
+
+                    if accelerator.is_main_process:
+                        if global_step % args.checkpointing_steps == 0:
+                            if args.checkpoints_total_limit is not None:
+                                checkpoints = os.listdir(args.output_dir)
+                                checkpoints = [
+                                    d for d in checkpoints if d.startswith("checkpoint")
+                                ]
+                                checkpoints = sorted(
+                                    checkpoints, key=lambda x: int(x.split("-")[1])
+                                )
+                                if len(checkpoints) >= args.checkpoints_total_limit:
+                                    num_to_remove = (
+                                        len(checkpoints) - args.checkpoints_total_limit + 1
+                                    )
+                                    removing_checkpoints = checkpoints[0:num_to_remove]
+                                    logger.info(
+                                        f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"
+                                    )
+                                    logger.info(
+                                        f"removing checkpoints: {', '.join(removing_checkpoints)}"
+                                    )
+                                    for removing_checkpoint in removing_checkpoints:
+                                        removing_checkpoint = os.path.join(
+                                            args.output_dir, removing_checkpoint
+                                        )
+                                        shutil.rmtree(removing_checkpoint)
+                            save_path = os.path.join(
+                                args.output_dir, f"checkpoint-{global_step}"
+                            )
+
+                            accelerator.save_state(save_path)
+                            logger.info(f"Saved state to {save_path}")
+
+                            if args.use_ema:
+                                model_ema.save_pretrained(save_path, filename="dit")
+                                logger.info(f"Saved EMA model to {save_path}")
+
+                logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+
+                progress_bar.set_postfix(**logs)
+                accelerator.log(logs, step=global_step)
+
+                if global_step >= args.max_train_steps:
+                    break
+
+            if accelerator.is_main_process:
+                if epoch % args.validation_epochs == 0:
+                    pass  # will implement later
+
+        accelerator.end_training()
+    else:
+        for step, batch in enumerate(val_dataloader):
             models_to_accumulate = [model]
             with accelerator.accumulate(models_to_accumulate):
                 if args.dataset == "ShapeNetCore":#shapenetcore
@@ -758,99 +886,26 @@ def main(args):
                     #X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
                     #FIXME Using two categories for develpment purposes
                     y = (y == 2).long()
-                x_0 = rectified_flow.sample_source_distribution(X.shape[0])
-                t = rectified_flow.sample_train_time(X.shape[0])
-                t= t.squeeze() #FIXME it seems that rectified_flow adjust time shape to x already during sample_train and also during get_loss, which creates a bug
-                #FIXME. It would improve performance if we dont load dataset during reflow
-                if args.reflow:
-                    with torch.no_grad():
-                        traj1 = euler_sampler.sample_loop(
+
+                with torch.no_grad():
+                    euler_sampler = MyEulerSampler(
+                        rectified_flow=rectified_flow,
+                        num_steps=args.num_steps,
+                        num_samples=args.sample_batch_size,
+                    )
+                    
+                    # Sample method 1)
+                    # Will use the default num_steps and num_samples previously set in the Sampler class
+                    traj1 = euler_sampler.sample_loop(
                         seed=233,
                         y=y,
                         gap= gap_pid,
                         energy=energy,
-                        ).trajectories[-1]
-                    loss = rectified_flow.get_loss(
-                        x_0=x_0,
-                        x_1=traj1,
-                        y= y,
-                        gap= gap_pid,
-                        energy=energy,
-                        t=t,
-                    )
-                else:
-                    loss = rectified_flow.get_loss(
-                        x_0=x_0,
-                        x_1=X,
-                        y= y,
-                        gap= gap_pid,
-                        energy=energy,
-                        t=t,
-                    )
-
-                accelerator.backward(loss)
-
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad()
-
-            if accelerator.sync_gradients:
-                progress_bar.update(1)
-                global_step += 1
-
-                if args.use_ema:
-                    model_ema.update()
-
-                if accelerator.is_main_process:
-                    if global_step % args.checkpointing_steps == 0:
-                        if args.checkpoints_total_limit is not None:
-                            checkpoints = os.listdir(args.output_dir)
-                            checkpoints = [
-                                d for d in checkpoints if d.startswith("checkpoint")
-                            ]
-                            checkpoints = sorted(
-                                checkpoints, key=lambda x: int(x.split("-")[1])
-                            )
-                            if len(checkpoints) >= args.checkpoints_total_limit:
-                                num_to_remove = (
-                                    len(checkpoints) - args.checkpoints_total_limit + 1
-                                )
-                                removing_checkpoints = checkpoints[0:num_to_remove]
-                                logger.info(
-                                    f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"
-                                )
-                                logger.info(
-                                    f"removing checkpoints: {', '.join(removing_checkpoints)}"
-                                )
-                                for removing_checkpoint in removing_checkpoints:
-                                    removing_checkpoint = os.path.join(
-                                        args.output_dir, removing_checkpoint
-                                    )
-                                    shutil.rmtree(removing_checkpoint)
-                        save_path = os.path.join(
-                            args.output_dir, f"checkpoint-{global_step}"
                         )
-
-                        accelerator.save_state(save_path)
-                        logger.info(f"Saved state to {save_path}")
-
-                        if args.use_ema:
-                            model_ema.save_pretrained(save_path, filename="dit")
-                            logger.info(f"Saved EMA model to {save_path}")
-
-            logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
-
-            progress_bar.set_postfix(**logs)
-            accelerator.log(logs, step=global_step)
-
-            if global_step >= args.max_train_steps:
-                break
-
-        if accelerator.is_main_process:
-            if epoch % args.validation_epochs == 0:
-                pass  # will implement later
-
-    accelerator.end_training()
+                    pts= traj1.x_t
+                    #Ehistogram(X,pts, y, gap_pid, energy, title=f"Ehist_calopodit_del")
+                    plot_batch_3d(pts, y, title = "Model sampler")
+        
 
 
 if __name__ == "__main__":

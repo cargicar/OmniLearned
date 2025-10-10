@@ -472,7 +472,6 @@ def main(args):
         # You can now use train_loader for training and val_loader for validation
 
         iterdata = iter(val_dataloader)
-        iterdata = iter(val_dataloader)
         batch = next(iterdata)
         X, energy, y, gap_pid = batch
         X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
