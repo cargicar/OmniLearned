@@ -614,7 +614,7 @@ def main(args):
     sample_size = args.sample_batch_size
     
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)#, num_workers=args.num_workers)
-    val_dataloader = DataLoader(val_dataset, batch_size=sample_size, shuffle=False, collate_fn=collate_fn)#, num_workers=args.num_workers)
+    val_dataloader = DataLoader(val_dataset, batch_size=sample_size, shuffle=True, collate_fn=collate_fn)#, num_workers=args.num_workers)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)#, num_workers=args.num_workers)
 
     accelerator.print(f"Train dataset len: {len(train_dataloader)}")
@@ -874,6 +874,9 @@ def main(args):
 
         accelerator.end_training()
     else:
+        # cats = [0,1,2,3]
+        # single_x = next(iter(train_dataloader))
+        # y = torch.tensor(cats).to(single_x['X'].device)
         for step, batch in enumerate(val_dataloader):
             models_to_accumulate = [model]
             with accelerator.accumulate(models_to_accumulate):
@@ -905,7 +908,7 @@ def main(args):
                     pts= traj1.x_t
                     #Ehistogram(X,pts, y, gap_pid, energy, title=f"Ehist_calopodit_del")
                     plot_batch_3d(pts, y, title = "Model sampler")
-        
+            
 
 
 if __name__ == "__main__":

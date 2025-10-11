@@ -175,7 +175,6 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps= None, energi
     # Loop through a maximum of 10 point clouds in the batch
     # num_samples = batch_of_point_clouds.shape[0] # To plot the whole batch
     for i in range(min(10, batch_of_point_clouds.shape[0])):
-        
         # --- Data Preparation ---
         
         # Extract and convert the current point cloud tensor to a NumPy array
