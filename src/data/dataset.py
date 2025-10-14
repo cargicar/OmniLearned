@@ -6,6 +6,8 @@ import h5py
 from torch.utils.data import Dataset, DataLoader, random_split
 import numpy as np
 import pickle
+from typing import List, Tuple
+
 
 
 class HDF5Dataset(Dataset):
@@ -200,6 +202,101 @@ class PklDataset(Dataset):
         # This format is easy for the DataLoader to handle.
         return (shower, energy, pid, gap_pid)
 
+
+class LazyPklDataset(Dataset):
+    """
+    A PyTorch Dataset that loads data from pickle files on-demand (lazily) to avoid
+    loading the entire dataset into memory.
+    """
+
+    def __init__(self, data_dir, transform=None):
+        self.data_dir = data_dir
+        self.transform = transform
+        # The map will store tuples: (file_path, index_within_file)
+        # This list IS the only piece of data stored in memory for the whole dataset.
+        self.global_index_map: List[Tuple[str, int]] = []
+        
+        self._create_global_index_map()
+
+    def _create_global_index_map(self):
+        """
+        Scans all files to determine the total number of events and creates 
+        a map from global index to (file_path, local_index). 
+        This is the only necessary step that requires reading *some* metadata 
+        from the files, but not the heavy data itself.
+        """
+        file_paths = [os.path.join(self.data_dir, f) 
+                      for f in os.listdir(self.data_dir) if f.endswith('.pkl')]
+        
+        # We store and reuse the loaded file data temporarily
+        for file_path in file_paths:
+            try:
+                with open(file_path, 'rb') as f:
+                    # Load the file content
+                    data = pickle.load(f)
+
+                # Get the shower and energy arrays (assuming they are lists containing one array each)
+                # NOTE: We only need the *length* of the arrays, not the array contents.
+                showers = data['showers'][0]
+                
+                # Check if it's a list containing a numpy array, get its length
+                num_showers = len(showers) 
+                
+                # Create the mapping for all events in this file
+                for local_idx in range(num_showers):
+                    self.global_index_map.append((file_path, local_idx))
+                    
+            except (pickle.UnpicklingError, FileNotFoundError, KeyError, IndexError) as e:
+                print(f"Error reading file structure '{file_path}': {e}. Skipping file.")
+
+        print(f"Dataset indexed. Total events found: {len(self.global_index_map)}")
+
+    def __len__(self):
+        """Returns the total number of events in the dataset."""
+        return len(self.global_index_map)
+
+    def __getitem__(self, idx):
+        """Retrieves a single data sample by loading the necessary file on demand."""
+        
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+            
+        # 1. Look up the file and local index
+        file_path, local_idx = self.global_index_map[idx]
+        
+        # 2. Load the entire file (This is the I/O-heavy step)
+        with open(file_path, 'rb') as f:
+            data = pickle.load(f)
+            
+        # Extract the necessary data arrays (assuming they are single-element lists)
+        all_showers_in_file = data['showers'][0]
+        all_energies_in_file = data['energies'][0]
+        pid_in_file = data['pid'][0]
+        gap_pid_in_file = data['gap_pid'][0]
+        
+        # 3. Retrieve the specific sample (the "lazy" part)
+        shower = all_showers_in_file[local_idx]
+        energy = all_energies_in_file[local_idx]
+        pid = pid_in_file
+        gap_pid = gap_pid_in_file
+
+        # NOTE: Using hardcoded max/min is fine, but you might move it to a config
+        max_e = 1000000
+        min_e = 1000
+        
+        # Normalization and transformation
+        energy = (energy - min_e) / (max_e - min_e)
+
+        if self.transform:
+            shower = self.transform(shower)
+
+        # 4. Convert to PyTorch tensors
+        shower = torch.from_numpy(shower).float()
+        energy = torch.tensor(energy).float()
+        pid = torch.tensor(pid).long()
+        gap_pid = torch.tensor(gap_pid).long()
+
+        return (shower, energy, pid, gap_pid)
 
 # The provided dictionary mapping synset IDs to category names
 synsetid_to_cate = {'02691156': 'Airplane', '02773838': 'Bag', '02801938': 'Basket', '02808440': 'Bathtub', '02818832': 'Bed', '02828884': 'Bench', '02876657': 'Bottle', '02880940': 'Bowl', 

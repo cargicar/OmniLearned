@@ -107,15 +107,16 @@ def parse_args():
     parser.add_argument(
         "--data_root",
         type=str,
-        #default = "/global/cfs/cdirs/m3246/hep_ai/G4_individual_sims_pkl_test",
-        default="/pscratch/sd/c/ccardona/datasets/shapenetCore",
+        default = "/pscratch/sd/c/ccardona/datasets/G4_individual_sims_pkl_e_gamma",
+        #default = "/global/cfs/cdirs/m3246/hep_ai/G4_individual_sims_pkl_e_gamma",
+        #default="/pscratch/sd/c/ccardona/datasets/shapenetCore",
         help="The root directory where the dataset is stored.",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        #default="pscratch/sd/c/ccardona/models/G4",
-        default="/pscratch/sd/c/ccardona/models/shapenet",
+        default="pscratch/sd/c/ccardona/models/G4",
+        #default="/pscratch/sd/c/ccardona/models/shapenet",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
     parser.add_argument(
