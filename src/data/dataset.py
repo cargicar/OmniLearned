@@ -202,74 +202,119 @@ class PklDataset(Dataset):
         # This format is easy for the DataLoader to handle.
         return (shower, energy, pid, gap_pid)
 
+#FIXME read from config file
+# --- ASSUMED CONSTANT ---
+SHOWERS_PER_FILE = 1000 
+# ------------------------
 
 class LazyPklDataset(Dataset):
     """
-    A PyTorch Dataset that loads data from pickle files on-demand (lazily) to avoid
-    loading the entire dataset into memory.
+    A PyTorch Dataset that loads data from pickle files lazily.
     """
 
     def __init__(self, data_dir, transform=None):
         self.data_dir = data_dir
         self.transform = transform
-        # The map will store tuples: (file_path, index_within_file)
-        # This list IS the only piece of data stored in memory for the whole dataset.
         self.global_index_map: List[Tuple[str, int]] = []
+        # Cache for loaded file data to prevent redundant I/O during single-pass operations
+        self._file_cache = {} 
         
         self._create_global_index_map()
 
-    def _create_global_index_map(self):
-        """
-        Scans all files to determine the total number of events and creates 
-        a map from global index to (file_path, local_index). 
-        This is the only necessary step that requires reading *some* metadata 
-        from the files, but not the heavy data itself.
-        """
-        file_paths = [os.path.join(self.data_dir, f) 
-                      for f in os.listdir(self.data_dir) if f.endswith('.pkl')]
-        
-        # We store and reuse the loaded file data temporarily
-        for file_path in file_paths:
+    def _load_file_data(self, file_path):
+        """Helper to load file data, using a cache to avoid re-reading."""
+        if file_path not in self._file_cache:
             try:
                 with open(file_path, 'rb') as f:
-                    # Load the file content
                     data = pickle.load(f)
+                    self._file_cache[file_path] = data
+            except (pickle.UnpicklingError, FileNotFoundError, KeyError, IndexError) as e:
+                print(f"Error reading file '{file_path}': {e}. Skipping cache.")
+                return None
+        return self._file_cache[file_path]
+    
+    def _load_single_file(self, file_path):
+        """
+        Loads a single pickle file directly without using the instance cache.
+        The file is closed immediately after loading.
+        """
+        try:
+            with open(file_path, 'rb') as f:
+                data = pickle.load(f)
+            return data
+        except (pickle.UnpicklingError, FileNotFoundError, KeyError, IndexError) as e:
+            print(f"Error reading file structure '{file_path}': {e}. Skipping file.")
+            return None
 
-                # Get the shower and energy arrays (assuming they are lists containing one array each)
-                # NOTE: We only need the *length* of the arrays, not the array contents.
-                showers = data['showers'][0]
+    def _create_global_index_map(self):
+        """
+        Scans all files and creates the global index map.
+        Uses the knowledge that each file contains 1000 showers,
+        """
+        # Find all .pkl files in the data directory
+        file_paths = [os.path.join(self.data_dir, f)
+                      for f in os.listdir(self.data_dir) if f.endswith('.pkl')]
+        
+        # We will use _load_single_file (and immediately delete the result)
+        # to verify the file can be opened and contains data before indexing.
+        for file_path in file_paths:
+            
+            # Use the memory-efficient loader for a simple check
+            data = self._load_single_file(file_path)
+            
+            if data is None:
+                # Error message already printed in _load_single_file
+                continue
+            
+            try:
+                # Lightweight check: Ensure the necessary keys exist (e.g., 'showers')
+                # before assuming the file is valid.
+                if 'showers' not in data or len(data['showers']) == 0:
+                    print(f"File '{file_path}' is missing 'showers' key or is empty. Skipping.")
+                    del data
+                    continue
                 
-                # Check if it's a list containing a numpy array, get its length
-                num_showers = len(showers) 
+                # Use the known constant instead of len(data['showers'][0])
+                num_showers = SHOWERS_PER_FILE
                 
+                # Crucial: Immediately delete the loaded data to release memory
+                del data 
+
                 # Create the mapping for all events in this file
                 for local_idx in range(num_showers):
                     self.global_index_map.append((file_path, local_idx))
                     
-            except (pickle.UnpicklingError, FileNotFoundError, KeyError, IndexError) as e:
-                print(f"Error reading file structure '{file_path}': {e}. Skipping file.")
+            except Exception as e:
+                print(f"Error validating structure in '{file_path}': {e}. Skipping file.")
+                if 'data' in locals():
+                    del data
 
+        # Clear the cache, although it should already be empty if no other method called it
+        self._file_cache = {} 
         print(f"Dataset indexed. Total events found: {len(self.global_index_map)}")
 
     def __len__(self):
-        """Returns the total number of events in the dataset."""
         return len(self.global_index_map)
 
     def __getitem__(self, idx):
-        """Retrieves a single data sample by loading the necessary file on demand."""
+        # This implementation remains largely the same, but it's more efficient 
+        # to load the entire file's shower array here and process it once.
+        # However, for true lazy behavior, we stick to the original logic:
         
         if torch.is_tensor(idx):
             idx = idx.tolist()
             
-        # 1. Look up the file and local index
         file_path, local_idx = self.global_index_map[idx]
         
-        # 2. Load the entire file (This is the I/O-heavy step)
-        with open(file_path, 'rb') as f:
-            data = pickle.load(f)
-            
-        # Extract the necessary data arrays (assuming they are single-element lists)
+        # Use the cache mechanism if you want to avoid repeated I/O in DataLoaders
+        # NOTE: For proper DataLoader multiprocessing, you might need a different caching strategy.
+        data = self._load_file_data(file_path) 
+        if data is None:
+            # Handle error case, e.g., return a dummy sample or raise an exception
+            raise RuntimeError(f"Could not load data for index {idx}")
+
         all_showers_in_file = data['showers'][0]
+        # ... (rest of the __getitem__ remains the same)
         all_energies_in_file = data['energies'][0]
         pid_in_file = data['pid'][0]
         gap_pid_in_file = data['gap_pid'][0]
@@ -280,7 +325,7 @@ class LazyPklDataset(Dataset):
         pid = pid_in_file
         gap_pid = gap_pid_in_file
 
-        # NOTE: Using hardcoded max/min is fine, but you might move it to a config
+        # NOTE: Using hardcoded max/min, might move it to a config
         max_e = 1000000
         min_e = 1000
         
@@ -297,6 +342,67 @@ class LazyPklDataset(Dataset):
         gap_pid = torch.tensor(gap_pid).long()
 
         return (shower, energy, pid, gap_pid)
+
+    # Assuming 'self' refers to the LazyPklDataset instance
+
+    def compute_min_max(self):
+        """
+        Iterates over the entire dataset file-by-file to compute the global 
+        minimum and maximum values for the 'showers' array, ensuring each file
+        is released from memory immediately after processing.
+        """
+        print("Starting memory-efficient min/max calculation... This requires a full pass over all data.")
+        
+        # Get a list of file paths to process
+        unique_file_paths = sorted(list(set(fp for fp, _ in self.global_index_map)))
+
+        # Initialize min/max trackers
+        global_min = None
+        global_max = None
+        
+        # Iterate only over unique files
+        for file_path in unique_file_paths:
+            
+            # Load the file data
+            # 'data' will be released from memory once the loop continues for the next file
+            data = self._load_single_file(file_path)
+            if data is None:
+                continue
+                
+            # 3. Extract the showers array and compute min/max
+            try:
+                # Assuming 'showers' contains a list with a single numpy array
+                file_showers = data['showers'][0]
+                
+                # Ensure it's a numpy array to use min/max efficiently
+                if not isinstance(file_showers, np.ndarray):
+                    file_showers = np.array(file_showers)
+
+                # Compute min/max for this file across axes (0, 1)
+                file_min = file_showers.min(axis=(0, 1))
+                file_max = file_showers.max(axis=(0, 1))
+                
+                # 4. Update the global min/max
+                if global_min is None:
+                    global_min = file_min
+                    global_max = file_max
+                else:
+                    global_min = np.minimum(global_min, file_min)
+                    global_max = np.maximum(global_max, file_max)
+                    
+                # Crucial: Explicitly delete the loaded data to ensure memory is freed
+                del data
+                del file_showers
+                
+            except (KeyError, IndexError, ValueError) as e:
+                print(f"Error processing shower data in '{file_path}': {e}. Skipping file.")
+
+        print("Finished memory-efficient min/max calculation.")
+        
+        if global_min is None or global_max is None:
+            raise RuntimeError("Min/Max calculation failed: No valid data found.")
+            
+        return global_min, global_max
 
 # The provided dictionary mapping synset IDs to category names
 synsetid_to_cate = {'02691156': 'Airplane', '02773838': 'Bag', '02801938': 'Basket', '02808440': 'Bathtub', '02818832': 'Bed', '02828884': 'Bench', '02876657': 'Bottle', '02880940': 'Bowl', 

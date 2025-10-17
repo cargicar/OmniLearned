@@ -23,7 +23,7 @@ from accelerate.utils import (
     set_seed,
 )
 rootutils.setup_root(__file__, pythonpath=True)
-from src.data.dataset import HDF5Dataset, PklDataset, ShapeNetCore 
+from src.data.dataset import HDF5Dataset, LazyPklDataset, ShapeNetCore, PklDataset
 from src.data.transforms import MinMaxNormalize, CentroidNormalize, Compose
 from src.models.calopodit import DiT, DiTConfig
 from scripts.utils import plot_batch_3d
@@ -115,7 +115,7 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="pscratch/sd/c/ccardona/models/G4",
+        default="/pscratch/sd/c/ccardona/models/G4",
         #default="/pscratch/sd/c/ccardona/models/shapenet",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
@@ -152,7 +152,7 @@ def parse_args():
     parser.add_argument(
         "--train_batch_size",
         type=int,
-        default=64,
+        default=32,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -221,7 +221,7 @@ def parse_args():
     parser.add_argument(
         "--checkpointing_steps",
         type=int,
-        default=10_000,
+        default=1_000,
         help=(
             "Save a checkpoint of the training state every X updates. These checkpoints can be used both as final"
             " checkpoints in case they are better than the last checkpoint, and are also suitable for resuming"
@@ -522,6 +522,7 @@ def main(args):
     #TODO clean up this config. Delet unused params and add new useful ones.
     DiT_config = DiTConfig(
         #Point transformer config
+        k = 16,
         nblocks =  4,
         name= "calopodit",
         num_points = args.max_particles,
@@ -555,21 +556,25 @@ def main(args):
     #TODO read transform paramaeter from somewhere else and pass it to the creation of dataset
     files_path = args.data_root
     if args.dataset == "G4_pkl":#pkl
-        dataset = PklDataset(files_path)
+        accelerator.print(f"Loading dataset from {files_path}")
+        dataset = LazyPklDataset(files_path)
+        accelerator.print(f"Dataset from {files_path} successfully loaded.")
         #Transforms
         #TODO read from detector geometries (?)
-        min_vals = dataset.all_showers.min(axis=(0,1))
-        max_vals = dataset.all_showers.max(axis=(0,1))
+        accelerator.print('Computing min and max values for normalization...')
+        min_vals, max_vals = dataset.compute_min_max()
+        accelerator.print(f"min_vals: {min_vals}, max_vals: {max_vals}")
         # 4. Create the normalization transform object with these values        
         centroid_transform = CentroidNormalize()
         minmax_transform = MinMaxNormalize(min_vals, max_vals)
 
         composed_transform = Compose([
                             centroid_transform,
-                            minmax_transform
+                            minmax_transform,
                             ])
 
-        dataset = PklDataset(files_path, transform=composed_transform)
+        #dataset = LazyPklDataset(files_path, transform=composed_transform)
+        dataset.transform = minmax_transform
         collate_fn=pad_collate_fn
 
     elif args.dataset == "G4_h5":#h5
@@ -582,29 +587,28 @@ def main(args):
         val_dataset = ShapeNetCore(files_path, cates, max_num_points= args.max_particles, scale_mode='shape_unit', split='val', transform=None)
         test_dataset = ShapeNetCore(files_path, cates, max_num_points= args.max_particles, scale_mode='shape_unit', split='test', transform=None)
         collate_fn=None
-    
-    # Use random_split to create the subsets
-    if args.dataset != "ShapeNetCore":
-        train_dataset, val_dataset, test_dataset = random_split(
-            dataset, [num_train, num_val, num_test]
-        )
-    else:
-        dataset = train_dataset
-    
-    accelerator.print(f"Successfully loaded dataset with {len(dataset)} total events.")
         
     # Define the split ratios
     train_ratio = 0.8
     val_ratio = 0.1
     test_ratio = 0.1
 
-
-    # Calculate the number of samples for each split
+    # Use random_split to create the subsets
+    #if args.dataset != "ShapeNetCore":
     num_events = len(dataset)
     num_train = int(num_events * train_ratio)
     num_val = int(num_events * val_ratio)
     num_test = num_events - num_train - num_val
 
+    train_dataset, val_dataset, test_dataset = random_split(
+        dataset, [num_train, num_val, num_test]
+    )
+    #else:
+    #    dataset = train_dataset
+    
+    accelerator.print(f"Successfully loaded dataset with {len(dataset)} total events.")
+    # Calculate the number of samples for each split
+    
     print(f"\nDataset split into:")
     print(f"  Training set: {len(train_dataset)} events")
     print(f"  Validation set: {len(val_dataset)} events")
@@ -668,8 +672,6 @@ def main(args):
     def load_model_hook(models, input_dir):
         for _ in range(len(models)):
             model = models.pop()
-            print(type(model))
-
             if isinstance(accelerator.unwrap_model(model), DiT):
                 load_model = DiT.from_pretrained(input_dir, filename="dit")
                 model.load_state_dict(load_model.state_dict())
@@ -737,11 +739,11 @@ def main(args):
             path = os.path.basename(args.resume_from_checkpoint)
         else:
             # Get the most recent checkpoint
-            dirs = os.listdir(args.output_dir)
+            output_dir = args.output_dir
+            dirs = os.listdir(output_dir)
             dirs = [d for d in dirs if d.startswith("checkpoint")]
             dirs = sorted(dirs, key=lambda x: int(x.split("-")[1]))
             path = dirs[-1] if len(dirs) > 0 else None
-
         if path is None:
             accelerator.print(
                 f"Checkpoint '{args.resume_from_checkpoint}' does not exist. Starting a new training run."

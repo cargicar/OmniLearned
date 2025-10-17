@@ -33,7 +33,7 @@ def modulate(x, shift, scale):
 @dataclass
 class DiTConfig:
     #Point Transformer config
-    k: int = 16 
+    k: int = 8
     nblocks: int =  4
     num_centroids: int = 128
     hidden_size: int = 256#512
