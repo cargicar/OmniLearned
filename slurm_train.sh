@@ -2,9 +2,10 @@
 
 #SBATCH --job-name=Dit_shapenet
 #SBATCH --nodes=1
-#SBATCH --time=10:00:00
+#SBATCH --time=24:00:00
 #SBATCH --constraint=gpu
 #SBATCH --gpus=4
+#SBATH --mem=32GB
 #SBATCH --qos=regular
 #SBATCH --account=m3246
 ##SBATCH --volume="/pscratch/sd/c/ccardona:/pscratch/sd/c/ccardona"
@@ -16,6 +17,4 @@ conda activate omnilearned
 module load pytorch
 #srun torchrun --nproc_per_node=4 scripts/train_DiT.py 
 #srun torchrun --nproc_per_node=4 scripts/train_calopodit.py --dataset ShapeNetCore --num_classes 4 --gap_classes 0 --no_energy_cond --out_channels 3 --in_features 3 --max_particles 2000
-#srun torchrun --nproc_per_node=4 scripts/train_calopodit.py --dataset G4_pkl --num_classes 2 --gap_classes 4  --out_channels 4 --in_features 4 --max_particles 2000
-srun accelerate launch scripts/train_calopodit.py --dataset G4_pkl --num_classes 2 --gap_classes 4  --out_channels 4 --in_features 4 --max_particles 2000
-
+srun torchrun --nproc_per_node=4 scripts/train_calopodit.py --dataset G4_pkl --num_classes 2 --gap_classes 4  --out_channels 4 --in_features 4 --max_particles 3000

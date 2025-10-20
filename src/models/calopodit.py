@@ -20,6 +20,7 @@ import math
 
 from timm.models.vision_transformer import PatchEmbed, Attention, Mlp
 from src.models.transformer import TransformerBlock
+from src.models.edge_conv import EdgeConvBlock
 
 from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
@@ -319,13 +320,21 @@ class DiT(nn.Module):
         #     config.hidden_size,
         #     bias=True,
         # )
-        #NOTE  point transformer replaced PatchEmbed
+        #FIXME add flag to  pick between PT, EConv, PFS 
+        #NOTE point transformer replaced PatchEmbed
         self.x_embedder = TransformerBlock(
             config.in_features,
             config.hidden_size,#config.transformer_features,
             config.hidden_size,
             config.k,
             )
+        #NOTE  EdgeConvBlock replaced point transformer
+        # self.x_embedder = EdgeConvBlock(
+        #     config.in_features,
+        #     config.hidden_size,#config.transformer_features,
+        #     config.hidden_size,
+        #     config.k,
+        #     )
         
         self.t_embedder = TimestepEmbedder(config.hidden_size)
         if config.num_classes > 0:  # conditional generation on particle labels

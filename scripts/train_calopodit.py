@@ -152,7 +152,7 @@ def parse_args():
     parser.add_argument(
         "--train_batch_size",
         type=int,
-        default=32,
+        default=16,
         help="Batch size (per device) for the training dataloader.",
     )
     parser.add_argument(
@@ -169,16 +169,16 @@ def parse_args():
     )
     
     parser.add_argument(
-        "--no_energy_cond",  # <-- Renamed the argument for clarity
+        "--no_energy_cond",  
         action="store_false",
-        dest="energy_cond",  # <-- Tell argparse to save the result to args.energy_cond
+        dest="energy_cond",  # Tell argparse to save the result to args.energy_cond
         default=True,
         help="Flag to disable conditioning on the energy of each point (sets energy_cond to False).",
     )
     parser.add_argument(
-        "--no_train",  # <-- Renamed the argument for clarity
+        "--no_train",  
         action="store_false",
-        dest="train",  # <-- Tell argparse to save the result to args.energy_cond
+        dest="train", 
         default=True,
         help="Flag to disable conditioning on the energy of each point (sets energy_cond to False).",
     )
@@ -221,7 +221,7 @@ def parse_args():
     parser.add_argument(
         "--checkpointing_steps",
         type=int,
-        default=1_000,
+        default=500,
         help=(
             "Save a checkpoint of the training state every X updates. These checkpoints can be used both as final"
             " checkpoints in case they are better than the last checkpoint, and are also suitable for resuming"
@@ -558,13 +558,35 @@ def main(args):
     if args.dataset == "G4_pkl":#pkl
         accelerator.print(f"Loading dataset from {files_path}")
         dataset = LazyPklDataset(files_path)
+        #dataset = PklDataset(files_path)
         accelerator.print(f"Dataset from {files_path} successfully loaded.")
-        #Transforms
-        #TODO read from detector geometries (?)
-        accelerator.print('Computing min and max values for normalization...')
-        min_vals, max_vals = dataset.compute_min_max()
-        accelerator.print(f"min_vals: {min_vals}, max_vals: {max_vals}")
-        # 4. Create the normalization transform object with these values        
+        
+        save_min_path = os.path.join(args.output_dir, "min.pt")
+        save_max_path = os.path.join(args.output_dir, "max.pt")
+        #TODO temporary fix to normalize pcloud without calculating min max every time (current min_max vals are computed with --max_particles=3000)
+        if False:
+            #Save for Transforms
+            #TODO read from detector geometries (?)
+            accelerator.print('Computing min and max values for normalization...')
+            min_vals, max_vals = dataset.compute_min_max()
+        
+            
+            if accelerator.is_main_process:
+                torch.save(min_vals, save_min_path)
+                torch.save(max_vals, save_max_path)
+
+            accelerator.print(f"saving min_vals: {min_vals}, max_vals: {max_vals}")
+        else:
+            with torch.no_grad():
+                # Load min_max tensor to normalize dataset
+                min_vals = torch.load(save_min_path, map_location='cpu', weights_only=False)
+                max_vals = torch.load(save_max_path, map_location='cpu', weights_only=False)
+
+                # Note: After loading, if the tensor is small, you might move it to the current device manually:
+                #min_vals = torch.from_numpy(loaded_min).to(accelerator.device)
+                #max_vals = torch.from_numpy(loaded_max).to(accelerator.device)
+                    
+        #Create the normalization transform object with these values        
         centroid_transform = CentroidNormalize()
         minmax_transform = MinMaxNormalize(min_vals, max_vals)
 
@@ -573,8 +595,8 @@ def main(args):
                             minmax_transform,
                             ])
 
-        #dataset = LazyPklDataset(files_path, transform=composed_transform)
-        dataset.transform = minmax_transform
+        dataset = LazyPklDataset(files_path, transform=composed_transform)
+        #dataset.transform = minmax_transform
         collate_fn=pad_collate_fn
 
     elif args.dataset == "G4_h5":#h5
@@ -618,9 +640,9 @@ def main(args):
     batch_size = args.train_batch_size
     sample_size = args.sample_batch_size
     
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)#, num_workers=args.num_workers)
-    val_dataloader = DataLoader(val_dataset, batch_size=sample_size, shuffle=True, collate_fn=collate_fn)#, num_workers=args.num_workers)
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)#, num_workers=args.num_workers)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=args.dataloader_num_workers)
+    val_dataloader = DataLoader(val_dataset, batch_size=sample_size, shuffle=True, collate_fn=collate_fn, num_workers=args.dataloader_num_workers)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=args.dataloader_num_workers)
 
     accelerator.print(f"Train dataset len: {len(train_dataloader)}")
     print(f"learning rate: {args.learning_rate}")
