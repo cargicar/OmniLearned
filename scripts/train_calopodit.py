@@ -72,7 +72,7 @@ def parse_args():
     parser.add_argument(
         "--num_steps",
         type=int,
-        default=100,
+        default=1000,
         help=(
             "Number of steps for generation. Used in training Reflow and/or evaluation"
         ),
@@ -642,7 +642,7 @@ def main(args):
     
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=args.dataloader_num_workers)
     val_dataloader = DataLoader(val_dataset, batch_size=sample_size, shuffle=True, collate_fn=collate_fn, num_workers=args.dataloader_num_workers)
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=args.dataloader_num_workers)
+    test_dataloader = DataLoader(test_dataset, batch_size=sample_size, shuffle=False, collate_fn=collate_fn, num_workers=args.dataloader_num_workers)
 
     accelerator.print(f"Train dataset len: {len(train_dataloader)}")
     print(f"learning rate: {args.learning_rate}")
@@ -902,7 +902,10 @@ def main(args):
         # cats = [0,1,2,3]
         # single_x = next(iter(train_dataloader))
         # y = torch.tensor(cats).to(single_x['X'].device)
+        n=0
         for step, batch in enumerate(val_dataloader):
+            if n>1: break
+            n+=1
             models_to_accumulate = [model]
             with accelerator.accumulate(models_to_accumulate):
                 if args.dataset == "ShapeNetCore":#shapenetcore
@@ -912,7 +915,7 @@ def main(args):
                 else:
                     X, energy, y, gap_pid = batch # X; {B, N, 4}, energy: {B,}, y: {B,}, gap_pid: {B,}
                     #X, energy, y, gap_pid = X.to(device), energy.to(device), y.to(device), gap_pid.to(device)
-                    #FIXME Using two categories for develpment purposes
+                    #FIXME Using two categories for development purposes
                     y = (y == 2).long()
 
                 with torch.no_grad():
@@ -932,7 +935,7 @@ def main(args):
                         )
                     pts= traj1.x_t
                     #Ehistogram(X,pts, y, gap_pid, energy, title=f"Ehist_calopodit_del")
-                    plot_batch_3d(pts, y, title = "Model sampler")
+                    plot_batch_3d(pts, y, gaps=gap_pid, energies= energy, title = "Model sampler_G4")
             
 
 

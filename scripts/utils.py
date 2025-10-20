@@ -162,7 +162,7 @@ def Ehistogram(X1, X2, y, gap, energy, spatial_dim=0, title="Ehistogram Comparis
 #         plt.grid(axis='y', linestyle='--', alpha=0.6)
 #         plt.savefig(f"results/Ehisto_{title}_pcat_{category}_gcat_{gap_id}_energy_{Penergy:.2f}.png")
 
-def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps= None, energies= None, title="pointcloud", exclude_too_small= False):
+def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps= None, energies= None, title="pointcloud", exclude_too_small= True):
     """
     Plots each individual point cloud from a batch in a separate 3D scatter plot,
     excluding points where (x, y, z) == (0, 0, 0).
@@ -174,7 +174,7 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps= None, energi
     
     # Loop through a maximum of 10 point clouds in the batch
     # num_samples = batch_of_point_clouds.shape[0] # To plot the whole batch
-    for i in range(min(10, batch_of_point_clouds.shape[0])):
+    for i in range(min(4, batch_of_point_clouds.shape[0])):
         # --- Data Preparation ---
         
         # Extract and convert the current point cloud tensor to a NumPy array
