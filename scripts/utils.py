@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.spatial import KDTree # Used for efficient CPU nearest neighbor search
 
 def Ehistogram(X1, X2, y, gap, energy, spatial_dim=0, title="Ehistogram Comparison", bin_width=0.05):
     """
@@ -232,8 +233,9 @@ def plot_batch_3d(batch_of_point_clouds: torch.Tensor, cates, gaps= None, energi
         if gaps is not None and energies is not None:
             plot_title = f'Point Cloud {i+1}, {title} particle {category}, gap {gap}, energy {energy:.2f} ({len(x)} pts)'
             plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}_gcat_{gap}_energy_{energy:.2f}.png")
-        plot_title = f'Point Cloud {i+1}, ({len(x)} pts)'
-        plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}.png")
+        else:
+            plot_title = f'Point Cloud {i+1}, ({len(x)} pts)'
+            plt.savefig(f"results/gen_RF_{i}_{title}_pcat_{category}.png")
         ax.set_title(plot_title)
         
         # Display the plot and save
@@ -409,3 +411,79 @@ def ddp_setup():
         torch.backends.cudnn.benchmark = True
 
     return local_rank, rank, dist.get_world_size()
+
+
+# --- NOTE ON GPU IMPLEMENTATION ---
+# For efficient GPU implementation (essential for deep learning), 
+# you typically need to use a specialized library or CUDA extension, such as:
+# 1. torch_geometric.nn.fps (Farthest Point Sampling is often paired with CD)
+# 2. Open3D or Kaolin libraries, which provide optimized CD functions.
+# 3. Custom C++/CUDA extension for point cloud ops (e.g., using k-d trees or ball queries).
+# ----------------------------------
+
+def chamfer_distance(P: torch.Tensor, Q: torch.Tensor, squared: bool = True, exclude_too_small= True) -> torch.Tensor:
+    """
+    Computes the Chamfer Distance between two point clouds P and Q.
+
+    The input Tensors P and Q are expected to be on the same device (e.g., CPU).
+    If they are on the GPU, this function will transfer them to the CPU temporarily 
+    for the nearest neighbor search using KDTree, which is not ideal for training 
+    but necessary without a custom GPU kernel.
+
+    Args:
+        P (torch.Tensor): First point cloud, shape (N, D).
+        Q (torch.Tensor): Second point cloud, shape (M, D).
+        squared (bool): If True, computes the squared Euclidean distance (common for loss).
+                        If False, computes the standard Euclidean distance.
+
+    Returns:
+        torch.Tensor: The Chamfer Distance loss (scalar).
+    """
+    if P.device.type == 'cuda' or Q.device.type == 'cuda':
+        print("Warning: Moving tensors to CPU for KDTree search. Use a CUDA-optimized method for speed.")
+        P_cpu = P.detach().cpu().numpy()
+        Q_cpu = Q.detach().cpu().numpy()
+    else:
+        P_cpu = P.detach().numpy()
+        Q_cpu = Q.detach().numpy()
+
+    threshold = 1e-2
+    batch_size= P_cpu.shape[0]
+    #NOTE lets just consider space distance
+    P_cpu = P_cpu[:, :, :3]
+    Q_cpu = Q_cpu[:, :, :3]
+    cfs_batch = []
+    for i in range(batch_size):
+        if exclude_too_small:
+            too_small_mask = np.abs(Q_cpu[i]) > threshold    
+            # 2. A point is flagged for REMOVAL if ANY of its (x, y, z) coords are too large.
+            mask = np.any(too_small_mask, axis=1)
+            # --------------------------------------------------------------------
+            # Apply the mask to keep only the small-coordinate points
+            Q_cpu[i] = Q_cpu[i][mask]
+
+        tree_Q = KDTree(Q_cpu[i])
+        # dist_P is an array of the distance from each point in P to its NN in Q.
+        dist_P, _ = tree_Q.query(P_cpu[i], k=1) 
+        
+        # --- Term 2: Distance from Q to P ---
+        # For every point in Q, find its nearest neighbor (NN) in P.
+        tree_P = KDTree(P_cpu[i])
+        # dist_Q is an array of the distance from each point in Q to its NN in P.
+        dist_Q, _ = tree_P.query(Q_cpu[i], k=1)
+
+        # --- Aggregation ---
+        
+        # Square the distances if required (common for loss functions)
+        if squared:
+            dist_P = dist_P ** 2
+            dist_Q = dist_Q ** 2
+        # Average the distances and sum the two terms
+        cd_loss = np.mean(dist_P) + np.mean(dist_Q)
+        cfs_batch.append(cd_loss)
+        print(f"Chamfer Distance sample {i} : {cd_loss:.6f}")
+    cd_loss = np.mean(cfs_batch)
+        
+    # Convert the final result back to a PyTorch tensor on the original device
+    #return torch.tensor(cd_loss, dtype=P.dtype, device=P.device)
+    return torch.tensor(cd_loss, dtype=P.dtype)

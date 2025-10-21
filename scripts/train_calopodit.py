@@ -26,7 +26,7 @@ rootutils.setup_root(__file__, pythonpath=True)
 from src.data.dataset import HDF5Dataset, LazyPklDataset, ShapeNetCore, PklDataset
 from src.data.transforms import MinMaxNormalize, CentroidNormalize, Compose
 from src.models.calopodit import DiT, DiTConfig
-from scripts.utils import plot_batch_3d
+from scripts.utils import plot_batch_3d, chamfer_distance
 
 from diffusers.optimization import get_scheduler
 
@@ -72,7 +72,7 @@ def parse_args():
     parser.add_argument(
         "--num_steps",
         type=int,
-        default=1000,
+        default=100,
         help=(
             "Number of steps for generation. Used in training Reflow and/or evaluation"
         ),
@@ -115,7 +115,7 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/pscratch/sd/c/ccardona/models/G4",
+        default="/pscratch/sd/c/ccardona/models/G4_non_normalization",
         #default="/pscratch/sd/c/ccardona/models/shapenet",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
@@ -221,7 +221,7 @@ def parse_args():
     parser.add_argument(
         "--checkpointing_steps",
         type=int,
-        default=500,
+        default=5_000,
         help=(
             "Save a checkpoint of the training state every X updates. These checkpoints can be used both as final"
             " checkpoints in case they are better than the last checkpoint, and are also suitable for resuming"
@@ -561,38 +561,35 @@ def main(args):
         #dataset = PklDataset(files_path)
         accelerator.print(f"Dataset from {files_path} successfully loaded.")
         
-        save_min_path = os.path.join(args.output_dir, "min.pt")
-        save_max_path = os.path.join(args.output_dir, "max.pt")
-        #TODO temporary fix to normalize pcloud without calculating min max every time (current min_max vals are computed with --max_particles=3000)
-        if False:
-            #Save for Transforms
-            #TODO read from detector geometries (?)
-            accelerator.print('Computing min and max values for normalization...')
-            min_vals, max_vals = dataset.compute_min_max()
+        # save_min_path = os.path.join(args.output_dir, "min.pt")
+        # save_max_path = os.path.join(args.output_dir, "max.pt")
+        # #TODO temporary fix to normalize pcloud without calculating min max every time (current min_max vals are computed with --max_particles=3000)
+        # if False:
+        #     #Save for Transforms
+        #     #TODO read from detector geometries (?)
+        #     accelerator.print('Computing min and max values for normalization...')
+        #     min_vals, max_vals = dataset.compute_min_max()
         
             
-            if accelerator.is_main_process:
-                torch.save(min_vals, save_min_path)
-                torch.save(max_vals, save_max_path)
+        #     if accelerator.is_main_process:
+        #         torch.save(min_vals, save_min_path)
+        #         torch.save(max_vals, save_max_path)
 
-            accelerator.print(f"saving min_vals: {min_vals}, max_vals: {max_vals}")
-        else:
-            with torch.no_grad():
-                # Load min_max tensor to normalize dataset
-                min_vals = torch.load(save_min_path, map_location='cpu', weights_only=False)
-                max_vals = torch.load(save_max_path, map_location='cpu', weights_only=False)
+        #     accelerator.print(f"saving min_vals: {min_vals}, max_vals: {max_vals}")
+        # else:
+        #     with torch.no_grad():
+        #         # Load min_max tensor to normalize dataset
+        #         min_vals = torch.load(save_min_path, map_location='cpu', weights_only=False)
+        #         max_vals = torch.load(save_max_path, map_location='cpu', weights_only=False)
 
-                # Note: After loading, if the tensor is small, you might move it to the current device manually:
-                #min_vals = torch.from_numpy(loaded_min).to(accelerator.device)
-                #max_vals = torch.from_numpy(loaded_max).to(accelerator.device)
                     
         #Create the normalization transform object with these values        
         centroid_transform = CentroidNormalize()
-        minmax_transform = MinMaxNormalize(min_vals, max_vals)
+        #minmax_transform = MinMaxNormalize(min_vals, max_vals)
 
         composed_transform = Compose([
                             centroid_transform,
-                            minmax_transform,
+        #                    minmax_transform,
                             ])
 
         dataset = LazyPklDataset(files_path, transform=composed_transform)
@@ -935,7 +932,9 @@ def main(args):
                         )
                     pts= traj1.x_t
                     #Ehistogram(X,pts, y, gap_pid, energy, title=f"Ehist_calopodit_del")
-                    plot_batch_3d(pts, y, gaps=gap_pid, energies= energy, title = "Model sampler_G4")
+                    #plot_batch_3d(pts, y, gaps=gap_pid, energies= energy, title = "Model sampler_G4")
+                    cf = chamfer_distance(X, pts, squared=True)
+                    print(f"Chamfer Batch AVG Distance calopodit sampler: {cf.item():.6f}")
             
 
 
